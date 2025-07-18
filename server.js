@@ -3,14 +3,74 @@ const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const session = require('express-session');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// JWT Secret
+const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-key';
+const SESSION_SECRET = process.env.SESSION_SECRET || 'your-session-secret';
+
+// Default admin credentials (should be changed in production)
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+const ADMIN_PASSWORD_HASH = bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'admin123', 10);
+
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: true,
+    credentials: true
+}));
 app.use(bodyParser.json());
+app.use(session({
+    secret: SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false, // Set to true in production with HTTPS
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
+
+// Serve static files
 app.use(express.static('.'));
+
+// Authentication middleware
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Access denied. No token provided.' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) {
+            return res.status(403).json({ error: 'Invalid token.' });
+        }
+        req.user = user;
+        next();
+    });
+}
+
+// Optional auth middleware (for endpoints that work with or without auth)
+function optionalAuth(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token) {
+        jwt.verify(token, JWT_SECRET, (err, user) => {
+            if (!err) {
+                req.user = user;
+            }
+        });
+    }
+    next();
+}
 
 // Initialize SQLite database
 const db = new sqlite3.Database('./campaign_harvest.db', (err) => {
@@ -161,6 +221,63 @@ function initializeDatabase() {
         console.log('Database tables initialized.');
     });
 }
+
+// Authentication Routes
+
+// Login endpoint
+app.post('/api/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    try {
+        // Check if username matches
+        if (username !== ADMIN_USERNAME) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+
+        // Verify password
+        const isValidPassword = await bcrypt.compare(password, ADMIN_PASSWORD_HASH);
+        if (!isValidPassword) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+
+        // Generate JWT token
+        const token = jwt.sign(
+            { username: username, role: 'admin' },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        // Set session
+        req.session.user = { username, role: 'admin' };
+
+        res.json({ 
+            success: true, 
+            token,
+            user: { username, role: 'admin' }
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'An error occurred during login' });
+    }
+});
+
+// Verify token endpoint
+app.get('/api/auth/verify', authenticateToken, (req, res) => {
+    res.json({ 
+        valid: true, 
+        user: req.user 
+    });
+});
+
+// Logout endpoint
+app.post('/api/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            return res.status(500).json({ error: 'Could not log out' });
+        }
+        res.json({ success: true, message: 'Logged out successfully' });
+    });
+});
 
 // API Routes
 
@@ -770,7 +887,7 @@ app.get('/api/projects/export/csv', (req, res) => {
 
 // Serve frontend files
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.redirect('/login.html');
 });
 
 app.get('/admin', (req, res) => {

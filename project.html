@@ -14,6 +14,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Authentication check -->
+    <script src="auth-check.js"></script>
 </head>
 <body>
     <!-- Header -->
@@ -29,6 +32,14 @@
                         Back to Admin
                     </a>
                     <span class="project-name" id="headerProjectName">Loading...</span>
+                    <button class="btn btn-sm btn-outline-danger me-3" onclick="logout()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="me-1">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                        Logout
+                    </button>
                     <button class="theme-toggle" id="themeToggle">
                         <svg class="sun-icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="5"></circle>
