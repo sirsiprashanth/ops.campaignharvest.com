@@ -1,9 +1,42 @@
 /* Import main styles and add project-specific styles */
 @import url('styles.css');
 
+/* Corporate Modern Typography */
+:root {
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Inter', sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Inter', sans-serif;
+    --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+}
+
+/* Global Typography Overrides */
+body {
+    font-kerning: normal;
+    text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display) !important;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+p, li, td, th {
+    font-family: var(--font-body);
+    letter-spacing: -0.01em;
+}
+
+.btn {
+    font-family: var(--font-body);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+}
+
 /* Project-specific overrides */
 .project-name {
+    font-family: var(--font-body);
+    font-weight: 500;
     font-size: 0.875rem;
+    letter-spacing: -0.01em;
     color: var(--text-secondary);
     padding: 0.5rem 1rem;
     background-color: var(--bg-secondary);
@@ -15,20 +48,26 @@
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
+    font-family: var(--font-body);
+    font-weight: 500;
     font-size: 0.875rem;
-    padding: 0.375rem 0.75rem;
-    border-color: var(--text-secondary);
+    letter-spacing: -0.01em;
+    padding: 0.5rem 1rem;
+    border-color: rgba(0, 0, 0, 0.2);
     color: var(--text-secondary);
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
 }
 
 .nav .btn-outline-primary:hover {
     background-color: var(--bg-secondary);
     border-color: var(--text-primary);
     color: var(--text-primary);
+    transform: translateY(-1px);
 }
 
 .dark-mode .nav .btn-outline-primary {
-    border-color: var(--text-secondary);
+    border-color: rgba(255, 255, 255, 0.2);
     color: var(--text-secondary);
 }
 
@@ -124,13 +163,75 @@
     margin-top: 0.75rem;
 }
 
+/* Modern Corporate Accordion Styling */
+.accordion {
+    border: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    background: var(--bg-primary);
+}
+
+.accordion-item {
+    border: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: transparent;
+}
+
+.accordion-item:last-child {
+    border-bottom: none;
+}
+
+.accordion-header {
+    background: transparent;
+}
+
+.accordion-button {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.125rem;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    background-color: transparent;
+    border: none;
+    padding: 1.25rem 1.5rem;
+    box-shadow: none;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: rgba(79, 70, 229, 0.05);
+    color: var(--text-primary);
+    box-shadow: none;
+}
+
+.accordion-button:hover {
+    background-color: rgba(79, 70, 229, 0.03);
+}
+
+.accordion-button::after {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23666'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+    width: 1.25rem;
+    height: 1.25rem;
+    transition: transform 0.2s ease;
+}
+
+.accordion-button:not(.collapsed)::after {
+    transform: rotate(-180deg);
+}
+
 /* Style the accordion body for better readability */
 .accordion-body {
-    background-color: var(--bg-secondary);
-    border-radius: 0 0 0.5rem 0.5rem;
+    background-color: var(--bg-primary);
+    border-radius: 0;
     white-space: pre-wrap;
-    font-family: inherit;
-    line-height: 1.6;
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    padding: 1.5rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 /* Simple fade-in animation */
@@ -156,8 +257,54 @@
 
 /* Milestones container */
 #milestones-container {
-    max-width: 800px;
+    max-width: 900px;
     margin: 0 auto;
+}
+
+/* Modern Section Headers */
+.milestones-section h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.75rem;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+}
+
+/* Status Badges in Accordion Headers */
+.accordion-button .badge {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.75rem;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+}
+
+/* Date display in accordion */
+.accordion-button .text-muted {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--text-secondary) !important;
+    letter-spacing: -0.01em;
+}
+
+/* Milestone Controls */
+#milestoneControls .btn {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.875rem;
+    letter-spacing: -0.01em;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+#milestoneControls .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Message status indicators */
@@ -166,6 +313,27 @@
     border-left: 3px solid #4F46E5;
     padding-left: 1rem;
     margin-left: -1rem;
+}
+
+/* Dark mode specific styles */
+.dark-mode .accordion {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.dark-mode .accordion-item {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark-mode .accordion-button:not(.collapsed) {
+    background-color: rgba(79, 70, 229, 0.1);
+}
+
+.dark-mode .accordion-button:hover {
+    background-color: rgba(79, 70, 229, 0.05);
+}
+
+.dark-mode .accordion-body {
+    border-top-color: rgba(255, 255, 255, 0.05);
 }
 
 /* Responsive improvements */
@@ -180,5 +348,18 @@
     
     .milestone-tooltip {
         display: none;
+    }
+    
+    .accordion-button {
+        padding: 1rem 1.25rem;
+    }
+    
+    .milestone-title {
+        font-size: 1rem;
+    }
+    
+    #milestoneControls .btn {
+        font-size: 0.8125rem;
+        padding: 0.375rem 0.75rem;
     }
 }

@@ -232,7 +232,7 @@ function createMilestoneElement(milestone, index, accordionId) {
                 <div class="d-flex justify-content-between align-items-center w-100 me-3">
                     <div>
                         <div class="d-flex align-items-center gap-3 mb-1">
-                            <span class="h5 mb-0">${milestone.title}</span>
+                            <span class="milestone-title">${milestone.title}</span>
                             <span class="badge ${statusClass} text-capitalize">${statusText}</span>
                         </div>
                         <div class="text-muted small">
