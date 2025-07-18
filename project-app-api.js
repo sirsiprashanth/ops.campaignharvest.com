@@ -105,9 +105,15 @@ async function loadProject() {
     // Set progress bar width
     progressBar.style.width = `${progress}%`;
     
-    // Update budget
-    document.getElementById('budgetStatus').textContent = `₹${currentProject.budget.toLocaleString('en-IN')}`;
-    document.getElementById('budgetLabel').textContent = currentProject.project_type === 'retainer' ? 'monthly budget' : 'allocated budget';
+    // Update budget (hide if not available)
+    const budgetContainer = document.getElementById('budgetStatus').parentElement.parentElement;
+    if (currentProject.budget !== undefined) {
+        document.getElementById('budgetStatus').textContent = `₹${currentProject.budget.toLocaleString('en-IN')}`;
+        document.getElementById('budgetLabel').textContent = currentProject.project_type === 'retainer' ? 'monthly budget' : 'allocated budget';
+        budgetContainer.style.display = 'block';
+    } else {
+        budgetContainer.style.display = 'none';
+    }
     
     // Update team size
     document.getElementById('teamSize').textContent = currentProject.team_size;

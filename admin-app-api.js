@@ -109,6 +109,8 @@ document.querySelectorAll('.nav-item').forEach(item => {
             loadTimeline();
         } else if (section === 'audit-logs') {
             loadAuditLogs();
+        } else if (section === 'clients') {
+            loadClients();
         }
     });
 });
@@ -183,7 +185,7 @@ function createProjectRow(project) {
                 <span class="progress-text">${progress}%</span>
             </div>
         </td>
-        <td>₹${project.budget.toLocaleString('en-IN')}</td>
+        <td>${project.budget !== undefined ? `₹${project.budget.toLocaleString('en-IN')}` : '-'}</td>
         <td class="urgency-cell">
             <input type="number" 
                    class="urgency-input" 
@@ -357,7 +359,7 @@ async function showProjectDetails(projectId) {
         </div>` : ''}
         <div class="info-item">
             <span class="info-label">Budget</span>
-            <span class="info-value">₹${project.budget.toLocaleString('en-IN')}${project.project_type === 'retainer' ? '/month' : ''}</span>
+            <span class="info-value">${project.budget !== undefined ? `₹${project.budget.toLocaleString('en-IN')}${project.project_type === 'retainer' ? '/month' : ''}` : 'N/A'}</span>
         </div>
         <div class="info-item">
             <span class="info-label">Team Size</span>
@@ -394,7 +396,7 @@ function loadProjectMilestones(project) {
         milestoneEl.className = 'milestone-item';
         milestoneEl.innerHTML = `
             <div class="milestone-info">
-                <h5>${milestone.title}</h5>
+                <h5>${milestone.title} ${milestone.milestone_type === 'finance' ? '<span class="finance-badge">💰 Finance</span>' : ''}</h5>
                 <div class="milestone-meta">
                     <span>${formatDate(milestone.date)}</span>
                     <span class="project-status-badge status-${milestone.status}">${milestone.status}</span>
@@ -471,6 +473,7 @@ async function editMilestone(milestoneId) {
     document.getElementById('milestoneDate').value = milestone.date;
     document.getElementById('milestoneDescription').value = milestone.description;
     document.getElementById('milestoneStatus').value = milestone.status;
+    document.getElementById('milestoneType').value = milestone.milestone_type || 'general';
     
     milestoneModal.classList.add('active');
 }
@@ -534,7 +537,8 @@ milestoneForm.addEventListener('submit', async (e) => {
         title: document.getElementById('milestoneTitle').value,
         date: document.getElementById('milestoneDate').value,
         description: document.getElementById('milestoneDescription').value,
-        status: document.getElementById('milestoneStatus').value
+        status: document.getElementById('milestoneStatus').value,
+        milestone_type: document.getElementById('milestoneType').value
     };
     
     try {
@@ -1148,8 +1152,362 @@ document.getElementById('timelineProjectFilter').addEventListener('change', appl
 document.getElementById('timelinePriorityFilter').addEventListener('change', applyTimelineFilters);
 document.getElementById('timelineStatusFilter').addEventListener('change', applyTimelineFilters);
 
+// Create a flexible API service
+const apiService = {
+    async request(url, options = {}) {
+        const token = localStorage.getItem('authToken');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers
+        };
+        
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch(url, {
+            ...options,
+            headers
+        });
+        
+        return response;
+    },
+    
+    get(url) {
+        return this.request(url, { method: 'GET' });
+    },
+    
+    post(url, data) {
+        return this.request(url, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    },
+    
+    put(url, data) {
+        return this.request(url, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+    },
+    
+    delete(url, data) {
+        const options = { method: 'DELETE' };
+        if (data) {
+            options.body = JSON.stringify(data);
+        }
+        return this.request(url, options);
+    }
+};
+
+// Show toast notification
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? '#10B981' : type === 'error' ? '#EF4444' : '#3B82F6'};
+        color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Add CSS animations for toast
+if (!document.getElementById('toast-animations')) {
+    const style = document.createElement('style');
+    style.id = 'toast-animations';
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// Client Management Functions
+let allClients = [];
+let currentClientUsername = null;
+
+// Load clients
+async function loadClients() {
+    const response = await apiService.get('/api/clients');
+    if (response.ok) {
+        allClients = await response.json();
+        displayClients();
+    }
+}
+
+// Display clients in table
+function displayClients() {
+    const tbody = document.getElementById('clientsTableBody');
+    tbody.innerHTML = '';
+    
+    allClients.forEach(client => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${client.username}</td>
+            <td>${client.email || '-'}</td>
+            <td>${dayjs(client.created_at).format('MMM D, YYYY')}</td>
+            <td id="client-projects-${client.username}">Loading...</td>
+            <td>
+                <button class="btn btn-sm btn-secondary" onclick="manageClientProjects('${client.username}')">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="14" height="14" rx="2" ry="2"></rect>
+                        <line x1="3" y1="9" x2="17" y2="9"></line>
+                        <line x1="9" y1="17" x2="9" y2="9"></line>
+                    </svg>
+                    Projects
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteClient('${client.username}')">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    Delete
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+        
+        // Load project count for this client
+        loadClientProjectCount(client.username);
+    });
+}
+
+// Load project count for a client
+async function loadClientProjectCount(username) {
+    const response = await apiService.get(`/api/clients/${username}/projects`);
+    if (response.ok) {
+        const projects = await response.json();
+        const cell = document.getElementById(`client-projects-${username}`);
+        if (cell) {
+            cell.textContent = projects.length;
+        }
+    }
+}
+
+// Delete client
+async function deleteClient(username) {
+    if (!confirm(`Are you sure you want to delete client "${username}"? This will also remove all project assignments.`)) {
+        return;
+    }
+    
+    const response = await apiService.delete(`/api/clients/${username}`);
+    if (response.ok) {
+        loadClients();
+        showToast('Client deleted successfully', 'success');
+    } else {
+        const error = await response.json();
+        showToast(error.error || 'Failed to delete client', 'error');
+    }
+}
+
+// Manage client projects
+async function manageClientProjects(username) {
+    currentClientUsername = username;
+    document.getElementById('clientProjectsTitle').textContent = `Manage Projects for ${username}`;
+    
+    // Load all projects for dropdown
+    const projectsResponse = await apiService.get('/api/projects');
+    if (projectsResponse.ok) {
+        const allProjects = await projectsResponse.json();
+        const select = document.getElementById('projectAssignSelect');
+        select.innerHTML = '<option value="">-- Select a project --</option>';
+        allProjects.forEach(project => {
+            select.innerHTML += `<option value="${project.id}">${project.name}</option>`;
+        });
+    }
+    
+    // Load assigned projects
+    loadAssignedProjects();
+    
+    // Show modal
+    document.getElementById('clientProjectsModal').classList.add('active');
+}
+
+// Load assigned projects for current client
+async function loadAssignedProjects() {
+    const response = await apiService.get(`/api/clients/${currentClientUsername}/projects`);
+    if (response.ok) {
+        const projects = await response.json();
+        const container = document.getElementById('assignedProjectsList');
+        
+        if (projects.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No projects assigned</p>';
+        } else {
+            container.innerHTML = projects.map(project => `
+                <div class="assigned-project-item" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--surface); border-radius: 0.5rem; margin-bottom: 0.5rem;">
+                    <div>
+                        <strong>${project.name}</strong>
+                        <span style="color: var(--text-secondary); margin-left: 1rem;">${project.status}</span>
+                    </div>
+                    <button class="btn btn-sm btn-danger" onclick="removeProjectAssignment('${project.id}')">
+                        Remove
+                    </button>
+                </div>
+            `).join('');
+        }
+    }
+}
+
+// Assign project to client
+async function assignProject() {
+    const projectId = document.getElementById('projectAssignSelect').value;
+    if (!projectId) {
+        showToast('Please select a project', 'error');
+        return;
+    }
+    
+    const response = await apiService.post('/api/project-assignments', {
+        project_id: projectId,
+        client_username: currentClientUsername
+    });
+    
+    if (response.ok) {
+        document.getElementById('projectAssignSelect').value = '';
+        loadAssignedProjects();
+        loadClientProjectCount(currentClientUsername);
+        showToast('Project assigned successfully', 'success');
+    } else {
+        const error = await response.json();
+        showToast(error.error || 'Failed to assign project', 'error');
+    }
+}
+
+// Remove project assignment
+async function removeProjectAssignment(projectId) {
+    const response = await apiService.delete('/api/project-assignments', {
+        project_id: projectId,
+        client_username: currentClientUsername
+    });
+    
+    if (response.ok) {
+        loadAssignedProjects();
+        loadClientProjectCount(currentClientUsername);
+        showToast('Project assignment removed', 'success');
+    } else {
+        const error = await response.json();
+        showToast(error.error || 'Failed to remove assignment', 'error');
+    }
+}
+
+// Client modal handlers
+const addClientBtn = document.getElementById('addClientBtn');
+const clientModal = document.getElementById('clientModal');
+const clientForm = document.getElementById('clientForm');
+const clientModalTitle = document.getElementById('clientModalTitle');
+
+if (addClientBtn && clientModal && clientForm && clientModalTitle) {
+    addClientBtn.addEventListener('click', () => {
+        console.log('Add client button clicked');
+        clientModal.classList.add('active');
+        clientForm.reset();
+        clientModalTitle.textContent = 'Add New Client';
+    });
+} else {
+    console.error('Client modal elements not found:', {
+        addClientBtn: !!addClientBtn,
+        clientModal: !!clientModal,
+        clientForm: !!clientForm,
+        clientModalTitle: !!clientModalTitle
+    });
+}
+
+const clientModalClose = document.getElementById('clientModalClose');
+const clientCancelBtn = document.getElementById('clientCancelBtn');
+const clientProjectsClose = document.getElementById('clientProjectsClose');
+
+if (clientModalClose) {
+    clientModalClose.addEventListener('click', () => {
+        clientModal.classList.remove('active');
+    });
+}
+
+if (clientCancelBtn) {
+    clientCancelBtn.addEventListener('click', () => {
+        clientModal.classList.remove('active');
+    });
+}
+
+if (clientProjectsClose) {
+    clientProjectsClose.addEventListener('click', () => {
+        document.getElementById('clientProjectsModal').classList.remove('active');
+    });
+}
+
+document.getElementById('assignProjectBtn').addEventListener('click', assignProject);
+
+// Client form submission
+document.getElementById('clientForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const clientData = {
+        username: document.getElementById('clientUsername').value,
+        password: document.getElementById('clientPassword').value,
+        email: document.getElementById('clientEmail').value || null
+    };
+    
+    const response = await apiService.post('/api/clients', clientData);
+    
+    if (response.ok) {
+        document.getElementById('clientModal').classList.remove('active');
+        loadClients();
+        showToast('Client created successfully', 'success');
+    } else {
+        const error = await response.json();
+        showToast(error.error || 'Failed to create client', 'error');
+    }
+});
+
+// Navigation handler is already set up above - no need for duplicate
+
 // Initialize
 window.addEventListener('load', () => {
+    // Display user role
+    const token = localStorage.getItem('authToken');
+    if (token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const userInfo = document.getElementById('userInfo');
+            if (userInfo) {
+                userInfo.textContent = `${payload.role.charAt(0).toUpperCase() + payload.role.slice(1)} Panel - ${payload.username}`;
+            }
+        } catch (e) {
+            console.error('Error parsing token:', e);
+        }
+    }
+    
     loadProjects();
     
     // Add entrance animation

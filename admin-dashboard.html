@@ -24,7 +24,7 @@
             <div class="header-content">
                 <h1 class="logo">CampaignHarvest Admin</h1>
                 <nav class="nav">
-                    <span class="user-info">Admin Panel</span>
+                    <span class="user-info" id="userInfo">Admin Panel</span>
                     <button class="btn btn-sm btn-outline-danger me-3" onclick="logout()">
                         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="me-1">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -91,6 +91,15 @@
                         <line x1="15" y1="18" x2="15" y2="12"></line>
                     </svg>
                     <span>Audit Logs</span>
+                </a>
+                <a href="#clients" class="nav-item" data-section="clients">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <span>Clients</span>
                 </a>
             </nav>
         </aside>
@@ -242,6 +251,37 @@
                     </div>
                 </div>
             </section>
+            <!-- Clients Section -->
+            <section id="clients-section" class="content-section">
+                <div class="section-header">
+                    <h2>Client Management</h2>
+                    <button class="btn btn-primary" id="addClientBtn">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add New Client
+                    </button>
+                </div>
+
+                <!-- Clients Table -->
+                <div class="clients-table-container">
+                    <table class="projects-table" id="clientsTable">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Created</th>
+                                <th>Assigned Projects</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientsTableBody">
+                            <!-- Clients will be dynamically loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </main>
     </div>
 
@@ -337,6 +377,14 @@
                         <option value="completed">Completed</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label for="milestoneType">Type</label>
+                    <select id="milestoneType" required>
+                        <option value="general">General</option>
+                        <option value="finance">Finance (Admin Only)</option>
+                    </select>
+                    <p class="form-help">Finance milestones are only visible to admin users</p>
+                </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" id="milestoneCancelBtn">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save Milestone</button>
@@ -397,6 +445,60 @@
                     <button type="submit" class="btn btn-primary">Send Reply</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Client Modal -->
+    <div class="modal" id="clientModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="clientModalTitle">Add New Client</h3>
+                <button class="modal-close" id="clientModalClose">&times;</button>
+            </div>
+            <form id="clientForm">
+                <div class="form-group">
+                    <label for="clientUsername">Username</label>
+                    <input type="text" id="clientUsername" required>
+                </div>
+                <div class="form-group">
+                    <label for="clientPassword">Password</label>
+                    <input type="password" id="clientPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="clientEmail">Email</label>
+                    <input type="email" id="clientEmail">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="clientCancelBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Client</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Client Projects Modal -->
+    <div class="modal" id="clientProjectsModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="clientProjectsTitle">Manage Client Projects</h3>
+                <button class="modal-close" id="clientProjectsClose">&times;</button>
+            </div>
+            <div class="client-projects-content">
+                <div class="form-group">
+                    <label for="projectAssignSelect">Assign New Project</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <select id="projectAssignSelect" class="form-control" style="flex: 1;">
+                            <option value="">-- Select a project --</option>
+                        </select>
+                        <button class="btn btn-primary" id="assignProjectBtn">Assign</button>
+                    </div>
+                </div>
+                
+                <h4>Assigned Projects</h4>
+                <div class="assigned-projects-list" id="assignedProjectsList">
+                    <!-- Assigned projects will be loaded here -->
+                </div>
+            </div>
         </div>
     </div>
 

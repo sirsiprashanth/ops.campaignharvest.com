@@ -238,7 +238,7 @@ function loadProjectMilestones(project) {
         milestoneEl.className = 'milestone-item';
         milestoneEl.innerHTML = `
             <div class="milestone-info">
-                <h5>${milestone.title}</h5>
+                <h5>${milestone.title} ${milestone.milestone_type === 'finance' ? '<span class="finance-badge">💰 Finance</span>' : ''}</h5>
                 <div class="milestone-meta">
                     <span>${formatDate(milestone.date)}</span>
                     <span class="project-status-badge status-${milestone.status}">${milestone.status}</span>
@@ -315,6 +315,7 @@ function editMilestone(milestoneId) {
     document.getElementById('milestoneDate').value = milestone.date;
     document.getElementById('milestoneDescription').value = milestone.description;
     document.getElementById('milestoneStatus').value = milestone.status;
+    document.getElementById('milestoneType').value = milestone.milestone_type || 'general';
     
     milestoneModal.classList.add('active');
 }
@@ -377,7 +378,8 @@ milestoneForm.addEventListener('submit', (e) => {
         title: document.getElementById('milestoneTitle').value,
         date: document.getElementById('milestoneDate').value,
         description: document.getElementById('milestoneDescription').value,
-        status: document.getElementById('milestoneStatus').value
+        status: document.getElementById('milestoneStatus').value,
+        milestone_type: document.getElementById('milestoneType').value
     };
     
     if (editingMilestoneId) {

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Dashboard - CampaignHarvest</title>
+    
+    <!-- External CSS -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="client-styles.css">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Authentication check -->
+    <script src="auth-check.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container-fluid">
+            <div class="header-content">
+                <h1 class="logo">CampaignHarvest</h1>
+                <nav class="nav">
+                    <span class="user-info" id="userInfo">Client Dashboard</span>
+                    <button class="btn btn-sm btn-outline-danger me-3" onclick="logout()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="me-1">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                        Logout
+                    </button>
+                    <button class="theme-toggle" id="themeToggle">
+                        <svg class="sun-icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                        </svg>
+                        <svg class="moon-icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Welcome Section -->
+            <section class="welcome-section">
+                <h2>Welcome, <span id="clientName">Client</span></h2>
+                <p>View your project progress and communicate with our team below.</p>
+            </section>
+
+            <!-- Projects Section -->
+            <section class="projects-section">
+                <div class="section-header">
+                    <h2>Your Projects</h2>
+                </div>
+                
+                <div id="projectsContainer" class="projects-grid">
+                    <!-- Projects will be loaded here -->
+                </div>
+                
+                <div id="noProjectsMessage" class="no-projects" style="display: none;">
+                    <svg width="64" height="64" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="58" height="58" rx="2" ry="2"></rect>
+                        <line x1="3" y1="20" x2="61" y2="20"></line>
+                        <line x1="20" y1="3" x2="20" y2="61"></line>
+                    </svg>
+                    <p>No projects assigned yet. Please contact your administrator.</p>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Project Details Modal -->
+    <div class="modal" id="projectModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="projectModalTitle">Project Details</h3>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Project Info -->
+                <div class="project-info" id="projectInfo">
+                    <!-- Project details will be loaded here -->
+                </div>
+
+                <!-- Milestones -->
+                <div class="milestones-section">
+                    <h4>Project Milestones</h4>
+                    <div id="milestonesContainer" class="milestones-list">
+                        <!-- Milestones will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Messages -->
+                <div class="messages-section">
+                    <h4>Messages & Updates</h4>
+                    <div id="messagesContainer" class="messages-list">
+                        <!-- Messages will be loaded here -->
+                    </div>
+                    
+                    <!-- Message Form -->
+                    <form id="messageForm" class="message-form">
+                        <textarea id="messageContent" placeholder="Type your message here..." rows="3" required></textarea>
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
+    <script src="client-app.js"></script>
+</body>
+</html>

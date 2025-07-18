@@ -59,9 +59,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Show success message
                 showSuccessMessage();
 
-                // Redirect to admin dashboard after a short delay
+                // Redirect based on user role
                 setTimeout(() => {
-                    window.location.href = '/admin-dashboard.html';
+                    if (data.user && data.user.role === 'client') {
+                        window.location.href = '/client-dashboard.html';
+                    } else {
+                        // Admin and manager users go to the admin dashboard
+                        window.location.href = '/admin-dashboard.html';
+                    }
                 }, 1000);
             } else {
                 // Show error message
