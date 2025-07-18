@@ -1,0 +1,34 @@
+/* Backup of accordion styles before removal */
+/* Bootstrap Accordion Overrides for Milestones */
+.accordion {
+    --bs-accordion-bg: var(--bg-primary);
+    --bs-accordion-border-color: var(--border-color);
+    --bs-accordion-btn-bg: var(--bg-primary);
+    --bs-accordion-btn-color: var(--text-primary);
+    --bs-accordion-btn-focus-box-shadow: 0 0 0 0.25rem rgba(79, 70, 229, 0.25);
+    --bs-accordion-active-bg: var(--bg-secondary);
+    --bs-accordion-active-color: var(--text-primary);
+    /* Ensure accordion has proper layout */
+    width: 100%;
+    overflow: visible;
+}
+
+/* Fix Bootstrap collapse visibility */
+.accordion-collapse {
+    /* Don't override Bootstrap's overflow handling during animation */
+}
+
+.accordion-collapse.collapse:not(.show) {
+    display: none;
+}
+
+.accordion-collapse.collapsing {
+    /* During animation */
+    overflow: hidden;
+}
+
+.accordion-collapse.collapse.show {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+}

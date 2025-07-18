@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Dashboard - CampaignHarvest</title>
+    
+    <!-- External CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="project-styles.css">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">CampaignHarvest</h1>
+                <nav class="nav">
+                    <a href="/admin" class="btn btn-sm btn-outline-primary me-3">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="me-1">
+                            <path d="M19 12H5M12 19l-7-7 7-7"></path>
+                        </svg>
+                        Back to Admin
+                    </a>
+                    <span class="project-name" id="headerProjectName">Loading...</span>
+                    <button class="theme-toggle" id="themeToggle">
+                        <svg class="sun-icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                        </svg>
+                        <svg class="moon-icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Error State -->
+    <div id="errorState" class="error-state" style="display: none;">
+        <div class="container">
+            <div class="error-content">
+                <h2>Project Not Found</h2>
+                <p>The project you're looking for doesn't exist or has been removed.</p>
+                <a href="index.html" class="btn btn-primary">Go to Homepage</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main" id="mainContent">
+        <div class="container">
+            <!-- Project Overview Section -->
+            <section class="project-overview" data-aos="fade-up">
+                <div class="section-header">
+                    <h2 id="projectTitle">Loading...</h2>
+                    <div class="project-status" id="projectStatus">
+                        <span class="status-indicator"></span>
+                        <span class="status-text">Loading...</span>
+                    </div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card" data-aos="fade-up" data-aos-delay="100">
+                        <div class="stat-icon">
+                            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 6v6l4 2"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Timeline</h3>
+                            <p class="stat-value" id="timelineStatus">-</p>
+                            <p class="stat-label" id="timelineLabel">-</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card" data-aos="fade-up" data-aos-delay="200">
+                        <div class="stat-icon">
+                            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Progress</h3>
+                            <p class="stat-value" id="progressPercentage">0%</p>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressBar"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card" data-aos="fade-up" data-aos-delay="300">
+                        <div class="stat-icon">
+                            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Budget</h3>
+                            <p class="stat-value" id="budgetStatus">$0</p>
+                            <p class="stat-label" id="budgetLabel">allocated</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card" data-aos="fade-up" data-aos-delay="400">
+                        <div class="stat-icon">
+                            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <h3>Team</h3>
+                            <p class="stat-value" id="teamSize">0</p>
+                            <p class="stat-label">Active members</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Milestones Timeline -->
+            <section class="milestones-section" data-aos="fade-up">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="mb-0">Project Milestones</h2>
+                    <div class="btn-group" role="group" id="milestoneControls" style="display: none;">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="expandAllBtn">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="me-1">
+                                <path d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                            Expand All
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="collapseAllBtn">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="me-1">
+                                <path d="M5 15l7-7 7 7"></path>
+                            </svg>
+                            Collapse All
+                        </button>
+                    </div>
+                </div>
+                <div id="milestones-container">
+                    <!-- Milestones accordion will be dynamically generated -->
+                </div>
+            </section>
+
+            <!-- Communication Panel -->
+            <section class="communication-section" data-aos="fade-up">
+                <h2>Questions & Updates</h2>
+                <div class="comm-container">
+                    <div class="messages-list" id="messagesList">
+                        <!-- Messages will be dynamically generated -->
+                    </div>
+                    <div class="message-input-container">
+                        <input type="text" class="message-input" id="messageInput" placeholder="Ask a question or leave a comment...">
+                        <button class="send-button" id="sendButton">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 CampaignHarvest. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
+    <script src="api-service.js"></script>
+    <script src="project-app-api.js"></script>
+</body>
+</html>

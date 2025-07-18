@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Database
+# *.db
+# *.sqlite
+# *.sqlite3
+# Note: Database is included for this project to maintain data consistency
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pm2-*.log
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Backup files
+backups/
+*.backup
+*.bak
+
+# Temporary files
+tmp/
+temp/
+*.tmp

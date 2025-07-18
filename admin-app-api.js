@@ -1,0 +1,1169 @@
+// Initialize AOS
+AOS.init({
+    duration: 800,
+    once: true,
+    offset: 100
+});
+
+// Data Management
+let projects = [];
+let currentProjectId = null;
+let currentMessageId = null;
+let editingProjectId = null;
+let editingMilestoneId = null;
+let editingProjectUrgency = null;
+
+// DOM Elements
+const projectsTableBody = document.getElementById('projectsTableBody');
+const projectModal = document.getElementById('projectModal');
+const milestoneModal = document.getElementById('milestoneModal');
+const projectDetailsModal = document.getElementById('projectDetailsModal');
+const replyModal = document.getElementById('replyModal');
+const projectForm = document.getElementById('projectForm');
+const milestoneForm = document.getElementById('milestoneForm');
+const replyForm = document.getElementById('replyForm');
+
+// Theme Toggle
+const themeToggle = document.getElementById('themeToggle');
+const body = document.body;
+const sunIcon = themeToggle.querySelector('.sun-icon');
+const moonIcon = themeToggle.querySelector('.moon-icon');
+
+// Load theme preference
+const savedTheme = localStorage.getItem('theme') || 'light';
+if (savedTheme === 'dark') {
+    body.classList.add('dark-mode');
+    sunIcon.style.display = 'none';
+    moonIcon.style.display = 'block';
+}
+
+themeToggle.addEventListener('click', () => {
+    body.classList.toggle('dark-mode');
+    const isDark = body.classList.contains('dark-mode');
+    
+    if (isDark) {
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+        localStorage.setItem('theme', 'dark');
+    } else {
+        sunIcon.style.display = 'block';
+        moonIcon.style.display = 'none';
+        localStorage.setItem('theme', 'light');
+    }
+});
+
+// Dynamic form requirements based on priority
+const projectPrioritySelect = document.getElementById('projectPriority');
+const startDateInput = document.getElementById('startDate');
+const budgetInput = document.getElementById('budget');
+const teamSizeInput = document.getElementById('teamSize');
+const projectTypeSelect = document.getElementById('projectType');
+const pipelineOptionalSpans = document.querySelectorAll('.pipeline-optional');
+
+function updateFormRequirements() {
+    const isPipeline = projectPrioritySelect.value === 'pipeline';
+    
+    // Toggle required attributes
+    if (isPipeline) {
+        startDateInput.removeAttribute('required');
+        budgetInput.removeAttribute('required');
+        teamSizeInput.removeAttribute('required');
+        projectTypeSelect.removeAttribute('required');
+        
+        // Show optional labels
+        pipelineOptionalSpans.forEach(span => span.style.display = 'inline');
+    } else {
+        startDateInput.setAttribute('required', 'required');
+        budgetInput.setAttribute('required', 'required');
+        teamSizeInput.setAttribute('required', 'required');
+        projectTypeSelect.setAttribute('required', 'required');
+        
+        // Hide optional labels
+        pipelineOptionalSpans.forEach(span => span.style.display = 'none');
+    }
+}
+
+// Add event listener for priority change
+projectPrioritySelect.addEventListener('change', updateFormRequirements);
+
+// Navigation
+document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+        e.preventDefault();
+        const section = item.dataset.section;
+        
+        // Update active nav
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        item.classList.add('active');
+        
+        // Show corresponding section
+        document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
+        document.getElementById(`${section}-section`).classList.add('active');
+        
+        // Load data for section
+        if (section === 'messages') {
+            loadMessages();
+        } else if (section === 'analytics') {
+            loadAnalytics();
+        } else if (section === 'timeline') {
+            loadTimeline();
+        } else if (section === 'audit-logs') {
+            loadAuditLogs();
+        }
+    });
+});
+
+// Project Management
+async function loadProjects() {
+    projectsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem;">Loading projects...</td></tr>';
+    
+    projects = await APIService.getProjects();
+    projectsTableBody.innerHTML = '';
+    
+    if (projects.length === 0) {
+        projectsTableBody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 3rem;">
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">No projects yet</p>
+                    <button class="btn btn-primary" onclick="showAddProjectModal()">Create Your First Project</button>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    projects.forEach(project => {
+        const projectRow = createProjectRow(project);
+        projectsTableBody.appendChild(projectRow);
+    });
+    
+    // Update audit log filter
+    updateAuditProjectFilter();
+    
+    // Animate rows
+    gsap.fromTo('.project-row', 
+        {
+            scale: 0.9,
+            opacity: 0
+        },
+        {
+            scale: 1,
+            opacity: 1,
+            duration: 0.5,
+            stagger: 0.1,
+            ease: "power2.out"
+        }
+    );
+}
+
+function createProjectRow(project) {
+    const tr = document.createElement('tr');
+    tr.className = 'project-row';
+    tr.dataset.projectId = project.id;
+    
+    const progress = calculateProjectProgress(project);
+    const statusClass = `status-${project.status.replace(' ', '-')}`;
+    const priorityClass = project.priority === 'converted' ? 'priority-converted' : 'priority-pipeline';
+    
+    tr.innerHTML = `
+        <td class="project-name-cell">
+            <div class="project-name-wrapper">
+                <h4 class="project-name">${project.name}</h4>
+                ${project.project_type === 'retainer' ? '<span class="project-type-badge">Retainer</span>' : project.project_type === 'fixed' ? '<span class="project-type-badge">Fixed</span>' : ''}
+            </div>
+        </td>
+        <td>
+            <span class="project-status-badge ${statusClass}">${formatStatus(project.status)}</span>
+        </td>
+        <td>
+            <div class="progress-cell">
+                <div class="progress-bar-inline">
+                    <div class="progress-fill-inline" style="width: ${progress}%"></div>
+                </div>
+                <span class="progress-text">${progress}%</span>
+            </div>
+        </td>
+        <td>₹${project.budget.toLocaleString('en-IN')}</td>
+        <td class="urgency-cell">
+            <input type="number" 
+                   class="urgency-input" 
+                   value="${project.urgency || ''}" 
+                   placeholder="-" 
+                   min="1" 
+                   onchange="updateProjectUrgency('${project.id}', this.value)"
+                   onclick="event.stopPropagation()"
+                   style="width: 60px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); text-align: center;">
+        </td>
+        <td class="duration-cell">
+            <div>${formatDate(project.start_date)}</div>
+            <div class="text-muted">${project.end_date ? formatDate(project.end_date) : 'Ongoing'}</div>
+        </td>
+        <td>
+            <span class="project-priority-badge ${priorityClass}">${project.priority === 'converted' ? 'P1' : 'P2'}</span>
+        </td>
+        <td class="actions-cell">
+            <div class="table-actions">
+                <button class="btn-icon" onclick="showProjectDetails('${project.id}')" title="Manage">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L14 4L7 11L5 12L4 10L11 3L12 2Z"></path>
+                        <path d="M10 4L12 6"></path>
+                        <path d="M2 14L4 10L8 14L4 16L2 14Z"></path>
+                    </svg>
+                </button>
+                <button class="btn-icon" onclick="editProject('${project.id}')" title="Edit">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4C2.89543 4 2 4.89543 2 6V18C2 19.1046 2.89543 20 4 20H16C17.1046 20 18 19.1046 18 18V11"></path>
+                        <path d="M18.5 2.5C19.3284 3.32843 19.3284 4.67157 18.5 5.5L8 16L4 17L5 13L15.5 2.5C16.3284 1.67157 17.6716 1.67157 18.5 2.5Z"></path>
+                    </svg>
+                </button>
+                <button class="btn-icon btn-icon-danger" onclick="deleteProject('${project.id}')" title="Delete">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6H21"></path>
+                        <path d="M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6"></path>
+                        <path d="M19 6V20C19 20.5523 18.5523 21 18 21H6C5.44772 21 5 20.5523 5 20V6"></path>
+                    </svg>
+                </button>
+                <a href="project.html?id=${project.id}" class="btn-icon" target="_blank" title="View Public Page">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 13V19C18 20.1046 17.1046 21 16 21H5C3.89543 21 3 20.1046 3 19V8C3 6.89543 3.89543 6 5 6H11"></path>
+                        <path d="M15 3H21V9"></path>
+                        <path d="M10 14L21 3"></path>
+                    </svg>
+                </a>
+                <button class="btn-icon btn-icon-success" onclick="downloadProjectCSV('${project.id}')" title="Download CSV">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                </button>
+            </div>
+        </td>
+    `;
+    
+    return tr;
+}
+
+function showAddProjectModal() {
+    editingProjectId = null;
+    editingProjectUrgency = null;
+    document.getElementById('modalTitle').textContent = 'Add New Project';
+    projectForm.reset();
+    // Reset priority to default and update form requirements
+    updateFormRequirements();
+    projectModal.classList.add('active');
+}
+
+async function editProject(projectId) {
+    const project = await APIService.getProject(projectId);
+    if (!project) return;
+    
+    editingProjectId = projectId;
+    editingProjectUrgency = project.urgency; // Store the current urgency
+    document.getElementById('modalTitle').textContent = 'Edit Project';
+    
+    // Fill form with project data
+    document.getElementById('projectName').value = project.name;
+    document.getElementById('startDate').value = project.start_date || '';
+    document.getElementById('endDate').value = project.end_date || '';
+    document.getElementById('budget').value = project.budget || '';
+    document.getElementById('teamSize').value = project.team_size || '';
+    document.getElementById('projectStatus').value = project.status;
+    if (project.project_type) {
+        document.getElementById('projectType').value = project.project_type;
+    } else {
+        document.getElementById('projectType').value = '';
+    }
+    if (project.priority) {
+        document.getElementById('projectPriority').value = project.priority;
+        // Update form requirements based on priority
+        updateFormRequirements();
+    }
+    
+    projectModal.classList.add('active');
+}
+
+async function deleteProject(projectId) {
+    const project = await APIService.getProject(projectId);
+    if (!project) return;
+    
+    const confirmMessage = `Are you sure you want to delete "${project.name}"?\n\nThis will permanently delete:\n• The project\n• ${project.milestones?.length || 0} milestones\n• ${project.messages?.length || 0} messages\n\nThis action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) return;
+    
+    try {
+        await APIService.deleteProject(projectId);
+        showNotification('Project deleted successfully');
+        await loadProjects();
+    } catch (error) {
+        showNotification('Failed to delete project', 'error');
+    }
+}
+
+async function updateProjectUrgency(projectId, urgencyValue) {
+    try {
+        const urgency = urgencyValue === '' ? null : parseInt(urgencyValue);
+        
+        // Make API call to update urgency
+        const response = await fetch(`/api/projects/${projectId}/urgency`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ urgency })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to update urgency');
+        }
+        
+        showNotification('Urgency updated successfully');
+        
+        // Reload projects to show the reordered list
+        await loadProjects();
+    } catch (error) {
+        console.error('Error updating urgency:', error);
+        showNotification('Failed to update urgency', 'error');
+        // Reload to reset the input
+        await loadProjects();
+    }
+}
+
+async function showProjectDetails(projectId) {
+    currentProjectId = projectId;
+    const project = await APIService.getProject(projectId);
+    if (!project) return;
+    
+    document.getElementById('projectDetailsTitle').textContent = project.name;
+    
+    // Load project info
+    const projectInfo = document.getElementById('projectInfo');
+    projectInfo.innerHTML = `
+        <div class="info-item">
+            <span class="info-label">Status</span>
+            <span class="info-value">${formatStatus(project.status)}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Project Type</span>
+            <span class="info-value">${project.project_type === 'retainer' ? 'Monthly Retainer' : project.project_type === 'fixed' ? 'Fixed Project' : 'Not specified'}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Start Date</span>
+            <span class="info-value">${formatDate(project.start_date)}</span>
+        </div>
+        ${project.end_date ? `<div class="info-item">
+            <span class="info-label">End Date</span>
+            <span class="info-value">${formatDate(project.end_date)}</span>
+        </div>` : ''}
+        <div class="info-item">
+            <span class="info-label">Budget</span>
+            <span class="info-value">₹${project.budget.toLocaleString('en-IN')}${project.project_type === 'retainer' ? '/month' : ''}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Team Size</span>
+            <span class="info-value">${project.team_size} members</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Progress</span>
+            <span class="info-value">${calculateProjectProgress(project)}%</span>
+        </div>
+    `;
+    
+    // Load milestones
+    loadProjectMilestones(project);
+    
+    // Load messages preview
+    loadProjectMessages(project);
+    
+    projectDetailsModal.classList.add('active');
+}
+
+function loadProjectMilestones(project) {
+    const milestonesList = document.getElementById('milestonesList');
+    milestonesList.innerHTML = '';
+    
+    if (!project.milestones || project.milestones.length === 0) {
+        milestonesList.innerHTML = '<p style="color: var(--text-secondary);">No milestones yet</p>';
+        return;
+    }
+    
+    project.milestones.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    project.milestones.forEach(milestone => {
+        const milestoneEl = document.createElement('div');
+        milestoneEl.className = 'milestone-item';
+        milestoneEl.innerHTML = `
+            <div class="milestone-info">
+                <h5>${milestone.title}</h5>
+                <div class="milestone-meta">
+                    <span>${formatDate(milestone.date)}</span>
+                    <span class="project-status-badge status-${milestone.status}">${milestone.status}</span>
+                </div>
+                <div style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem; white-space: pre-wrap;">${escapeHtml(milestone.description || '')}</div>
+            </div>
+            <div class="milestone-actions">
+                <button class="icon-btn" onclick="editMilestone('${milestone.id}')">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                </button>
+                <button class="icon-btn delete" onclick="deleteMilestone('${milestone.id}')">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14zM10 11v6M14 11v6"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+        milestonesList.appendChild(milestoneEl);
+    });
+}
+
+function loadProjectMessages(project) {
+    const messagesPreview = document.getElementById('projectMessagesPreview');
+    messagesPreview.innerHTML = '';
+    
+    if (!project.messages || project.messages.length === 0) {
+        messagesPreview.innerHTML = '<p style="color: var(--text-secondary);">No messages yet</p>';
+        return;
+    }
+    
+    // Show last 5 messages
+    const recentMessages = project.messages.slice(-5);
+    recentMessages.forEach(message => {
+        const messageEl = document.createElement('div');
+        messageEl.className = 'message-item';
+        messageEl.innerHTML = `
+            <div class="message-header">
+                <div class="message-info">
+                    <p class="message-author">${message.author}</p>
+                    <p class="message-time">${formatTime(message.timestamp)}</p>
+                </div>
+            </div>
+            <p class="message-content">${message.content}</p>
+        `;
+        messagesPreview.appendChild(messageEl);
+    });
+}
+
+// Milestone Management
+function showAddMilestoneModal() {
+    if (!currentProjectId) return;
+    
+    editingMilestoneId = null;
+    document.getElementById('milestoneModalTitle').textContent = 'Add Milestone';
+    milestoneForm.reset();
+    milestoneModal.classList.add('active');
+}
+
+async function editMilestone(milestoneId) {
+    const project = await APIService.getProject(currentProjectId);
+    if (!project) return;
+    
+    const milestone = project.milestones.find(m => m.id === milestoneId);
+    if (!milestone) return;
+    
+    editingMilestoneId = milestoneId;
+    document.getElementById('milestoneModalTitle').textContent = 'Edit Milestone';
+    
+    // Fill form
+    document.getElementById('milestoneTitle').value = milestone.title;
+    document.getElementById('milestoneDate').value = milestone.date;
+    document.getElementById('milestoneDescription').value = milestone.description;
+    document.getElementById('milestoneStatus').value = milestone.status;
+    
+    milestoneModal.classList.add('active');
+}
+
+async function deleteMilestone(milestoneId) {
+    if (!confirm('Are you sure you want to delete this milestone?')) return;
+    
+    try {
+        await APIService.deleteMilestone(milestoneId);
+        const project = await APIService.getProject(currentProjectId);
+        loadProjectMilestones(project);
+        showNotification('Milestone deleted successfully');
+    } catch (error) {
+        showNotification('Failed to delete milestone', 'error');
+    }
+}
+
+// Form Handlers
+projectForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const priority = document.getElementById('projectPriority').value;
+    const isPipeline = priority === 'pipeline';
+    
+    const projectData = {
+        name: document.getElementById('projectName').value,
+        start_date: document.getElementById('startDate').value || (isPipeline ? null : undefined),
+        end_date: document.getElementById('endDate').value || null,
+        budget: document.getElementById('budget').value ? parseInt(document.getElementById('budget').value) : (isPipeline ? null : undefined),
+        team_size: document.getElementById('teamSize').value ? parseInt(document.getElementById('teamSize').value) : (isPipeline ? null : undefined),
+        status: document.getElementById('projectStatus').value,
+        project_type: document.getElementById('projectType').value || (isPipeline ? null : undefined),
+        priority: priority,
+        urgency: editingProjectId ? editingProjectUrgency : null // Preserve urgency when editing
+    };
+    
+    try {
+        if (editingProjectId) {
+            // Update existing project
+            await APIService.updateProject(editingProjectId, projectData);
+            showNotification('Project updated successfully');
+        } else {
+            // Create new project
+            projectData.id = generateId();
+            await APIService.createProject(projectData);
+            showNotification('Project created successfully');
+        }
+        
+        await loadProjects();
+        projectModal.classList.remove('active');
+        projectForm.reset();
+    } catch (error) {
+        showNotification('Failed to save project', 'error');
+    }
+});
+
+milestoneForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const milestoneData = {
+        title: document.getElementById('milestoneTitle').value,
+        date: document.getElementById('milestoneDate').value,
+        description: document.getElementById('milestoneDescription').value,
+        status: document.getElementById('milestoneStatus').value
+    };
+    
+    try {
+        if (editingMilestoneId) {
+            // Update existing milestone
+            await APIService.updateMilestone(editingMilestoneId, milestoneData);
+            showNotification('Milestone updated successfully');
+        } else {
+            // Create new milestone
+            milestoneData.id = generateId();
+            await APIService.createMilestone(currentProjectId, milestoneData);
+            showNotification('Milestone created successfully');
+        }
+        
+        const project = await APIService.getProject(currentProjectId);
+        loadProjectMilestones(project);
+        milestoneModal.classList.remove('active');
+        milestoneForm.reset();
+    } catch (error) {
+        showNotification('Failed to save milestone', 'error');
+    }
+});
+
+// Messages Management
+async function loadMessages() {
+    const container = document.getElementById('adminMessagesContainer');
+    const filterSelect = document.getElementById('messageProjectFilter');
+    
+    container.innerHTML = '<div style="text-align: center; padding: 2rem;">Loading messages...</div>';
+    
+    // Update filter options
+    const projects = await APIService.getProjects();
+    filterSelect.innerHTML = '<option value="">All Projects</option>';
+    projects.forEach(project => {
+        filterSelect.innerHTML += `<option value="${project.id}">${project.name}</option>`;
+    });
+    
+    // Get all messages
+    const allMessages = await APIService.getMessages();
+    
+    // Display messages
+    container.innerHTML = '';
+    if (allMessages.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No messages yet</p>';
+        return;
+    }
+    
+    allMessages.forEach(message => {
+        if (!message.is_admin) {
+            const messageEl = createAdminMessageElement(message);
+            container.appendChild(messageEl);
+        }
+    });
+}
+
+function createAdminMessageElement(message) {
+    const div = document.createElement('div');
+    div.className = 'message-item';
+    
+    div.innerHTML = `
+        <div class="message-header">
+            <div class="message-info">
+                <p class="message-project">${message.project_name}</p>
+                <p class="message-author">${message.author}</p>
+                <p class="message-time">${formatTime(message.timestamp)}</p>
+            </div>
+            <button class="btn btn-sm btn-primary reply-btn" onclick="showReplyModal('${message.project_id}', '${message.id}')">Reply</button>
+        </div>
+        <p class="message-content">${message.content}</p>
+    `;
+    
+    return div;
+}
+
+async function showReplyModal(projectId, messageId) {
+    const messages = await APIService.getMessages();
+    const message = messages.find(m => m.id === messageId);
+    if (!message) return;
+    
+    currentProjectId = projectId;
+    currentMessageId = messageId;
+    
+    // Show original message
+    document.getElementById('originalMessage').innerHTML = `
+        <p><strong>${message.author}</strong> - ${formatTime(message.timestamp)}</p>
+        <p>${message.content}</p>
+    `;
+    
+    replyModal.classList.add('active');
+}
+
+replyForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const replyMessage = {
+        id: generateId(),
+        author: "Sarah Johnson",
+        role: "admin",
+        content: document.getElementById('replyContent').value,
+        timestamp: new Date().toISOString(),
+        is_admin: true
+    };
+    
+    try {
+        await APIService.createMessage(currentProjectId, replyMessage);
+        showNotification('Reply sent successfully');
+        await loadMessages();
+        replyModal.classList.remove('active');
+        replyForm.reset();
+    } catch (error) {
+        showNotification('Failed to send reply', 'error');
+    }
+});
+
+// Analytics
+async function loadAnalytics() {
+    const analytics = await APIService.getAnalytics();
+    
+    document.getElementById('totalProjects').textContent = analytics.total_projects;
+    document.getElementById('activeProjects').textContent = analytics.active_projects;
+    document.getElementById('completedProjects').textContent = analytics.completed_projects;
+    document.getElementById('totalMessages').textContent = analytics.total_messages;
+    
+    // Animate numbers
+    gsap.from('.analytics-value', {
+        textContent: 0,
+        duration: 2,
+        ease: "power1.in",
+        snap: { textContent: 1 },
+        stagger: 0.1
+    });
+}
+
+// Modal Controls
+document.getElementById('addProjectBtn').addEventListener('click', showAddProjectModal);
+document.getElementById('addMilestoneBtn').addEventListener('click', showAddMilestoneModal);
+
+// Close modals
+document.querySelectorAll('.modal-close').forEach(btn => {
+    btn.addEventListener('click', () => {
+        btn.closest('.modal').classList.remove('active');
+    });
+});
+
+document.querySelectorAll('#cancelBtn, #milestoneCancelBtn, #replyCancelBtn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        btn.closest('.modal').classList.remove('active');
+    });
+});
+
+// Click outside modal to close
+document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('active');
+        }
+    });
+});
+
+// Utility Functions
+function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+function calculateProjectProgress(project) {
+    if (!project.milestones || project.milestones.length === 0) return 0;
+    
+    const completed = project.milestones.filter(m => m.status === 'completed').length;
+    return Math.round((completed / project.milestones.length) * 100);
+}
+
+function formatDate(dateString) {
+    return dayjs(dateString).format('MMM DD, YYYY');
+}
+
+function formatTime(timestamp) {
+    const date = dayjs(timestamp);
+    const now = dayjs();
+    
+    if (date.isSame(now, 'day')) {
+        return date.format('h:mm A');
+    } else if (date.isSame(now.subtract(1, 'day'), 'day')) {
+        return 'Yesterday ' + date.format('h:mm A');
+    } else {
+        return date.format('MMM DD, h:mm A');
+    }
+}
+
+// Escape HTML to prevent XSS while preserving whitespace
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatStatus(status) {
+    return status.split('-').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+}
+
+// Download project as CSV
+function downloadProjectCSV(projectId) {
+    // Get project name for notification
+    const project = projects.find(p => p.id === projectId);
+    const projectName = project ? project.name : 'Project';
+    
+    // Create a temporary link and trigger download
+    const downloadUrl = `/api/projects/${projectId}/export/csv`;
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `${projectName.replace(/[^a-z0-9]/gi, '_')}_export.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showNotification(`Downloading ${projectName} data as CSV...`);
+}
+
+// Download all projects as CSV
+function downloadAllProjectsCSV() {
+    // Create a temporary link and trigger download
+    const downloadUrl = '/api/projects/export/csv';
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = 'all_projects_export.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showNotification('Downloading all projects data as CSV...');
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        background: ${type === 'success' ? 'var(--primary-gradient)' : '#EF4444'};
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem;
+        box-shadow: var(--shadow-lg);
+        z-index: 1000;
+        opacity: 0;
+        transform: translateY(1rem);
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Animate in
+    gsap.to(notification, {
+        opacity: 1,
+        y: 0,
+        duration: 0.3,
+        ease: "power2.out"
+    });
+    
+    // Remove after delay
+    setTimeout(() => {
+        gsap.to(notification, {
+            opacity: 0,
+            y: '1rem',
+            duration: 0.3,
+            ease: "power2.in",
+            onComplete: () => notification.remove()
+        });
+    }, 3000);
+}
+
+// Project type change handler
+document.getElementById('projectType').addEventListener('change', (e) => {
+    // End date is always optional, so we don't need to set required attribute
+    // The pipeline-optional span is already handled by updateFormRequirements()
+});
+
+// Audit Logs Functions
+let auditLogsCache = [];
+
+async function loadAuditLogs() {
+    const projectFilter = document.getElementById('auditProjectFilter').value;
+    const entityFilter = document.getElementById('auditEntityFilter').value;
+    
+    const params = new URLSearchParams();
+    if (projectFilter) params.append('project_id', projectFilter);
+    if (entityFilter) params.append('entity_type', entityFilter);
+    params.append('limit', '200');
+    
+    try {
+        const response = await fetch(`/api/audit-logs?${params}`);
+        const logs = await response.json();
+        auditLogsCache = logs;
+        renderAuditLogs(logs);
+    } catch (error) {
+        console.error('Failed to load audit logs:', error);
+    }
+}
+
+function renderAuditLogs(logs) {
+    const tbody = document.getElementById('auditLogsTableBody');
+    tbody.innerHTML = '';
+    
+    if (logs.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    No audit logs found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    logs.forEach(log => {
+        const row = document.createElement('tr');
+        
+        // Format timestamp
+        const timestamp = dayjs(log.timestamp).format('MMM DD, YYYY h:mm A');
+        
+        // Find project name
+        const project = projects.find(p => p.id === log.project_id);
+        const projectName = project ? project.name : 'Unknown Project';
+        
+        // Format changes
+        const changesHtml = formatAuditChanges(log);
+        
+        row.innerHTML = `
+            <td class="audit-log-timestamp">${timestamp}</td>
+            <td class="audit-log-user">${log.user_name} <span style="color: var(--text-secondary); font-size: 0.75rem;">(${log.user_role})</span></td>
+            <td class="audit-log-project">${projectName}</td>
+            <td><span class="audit-log-entity">${log.entity_type}</span></td>
+            <td><span class="audit-log-action ${log.action}">${log.action}</span></td>
+            <td class="audit-log-changes">${changesHtml}</td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    // Add click handlers for toggles
+    document.querySelectorAll('.audit-log-changes-toggle').forEach(toggle => {
+        toggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            const details = toggle.nextElementSibling;
+            details.classList.toggle('show');
+            toggle.textContent = details.classList.contains('show') ? 'Hide details' : 'View details';
+        });
+    });
+}
+
+function formatAuditChanges(log) {
+    if (log.action === 'create') {
+        return `<span style="color: var(--success);">Created new ${log.entity_type}</span>`;
+    } else if (log.action === 'delete') {
+        return `<span style="color: var(--danger);">Deleted ${log.entity_type}</span>`;
+    } else if (log.action === 'update' && log.old_values && log.new_values) {
+        const changes = [];
+        const fields = Object.keys(log.new_values);
+        
+        fields.forEach(field => {
+            if (JSON.stringify(log.old_values[field]) !== JSON.stringify(log.new_values[field])) {
+                changes.push(field);
+            }
+        });
+        
+        if (changes.length === 0) {
+            return '<span style="color: var(--text-secondary);">No changes</span>';
+        }
+        
+        const changesId = `changes-${log.id}`;
+        let detailsHtml = `
+            <a href="#" class="audit-log-changes-toggle">View details</a>
+            <div class="audit-log-changes-details" id="${changesId}">
+        `;
+        
+        changes.forEach(field => {
+            const oldValue = formatFieldValue(field, log.old_values[field]);
+            const newValue = formatFieldValue(field, log.new_values[field]);
+            
+            detailsHtml += `
+                <div class="audit-log-field">
+                    <span class="audit-log-field-name">${formatFieldName(field)}:</span><br>
+                    <span class="audit-log-old-value">${oldValue}</span> → 
+                    <span class="audit-log-new-value">${newValue}</span>
+                </div>
+            `;
+        });
+        
+        detailsHtml += '</div>';
+        return detailsHtml;
+    }
+    
+    return '<span style="color: var(--text-secondary);">Unknown action</span>';
+}
+
+function formatFieldName(field) {
+    return field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function formatFieldValue(field, value) {
+    if (value === null || value === undefined) {
+        return 'None';
+    }
+    
+    if (field === 'date' || field.includes('_date')) {
+        return dayjs(value).format('MMM DD, YYYY');
+    }
+    
+    if (field === 'budget') {
+        return `₹${value.toLocaleString('en-IN')}`;
+    }
+    
+    if (field === 'status') {
+        return value.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+    
+    return value.toString();
+}
+
+// Update audit log project filter when projects are loaded
+function updateAuditProjectFilter() {
+    const filter = document.getElementById('auditProjectFilter');
+    filter.innerHTML = '<option value="">All Projects</option>';
+    
+    projects.forEach(project => {
+        const option = document.createElement('option');
+        option.value = project.id;
+        option.textContent = project.name;
+        filter.appendChild(option);
+    });
+}
+
+// Add event listeners for audit log filters
+document.getElementById('auditProjectFilter').addEventListener('change', loadAuditLogs);
+document.getElementById('auditEntityFilter').addEventListener('change', loadAuditLogs);
+
+// Timeline Functions
+let timelineMilestones = [];
+
+async function loadTimeline() {
+    try {
+        const response = await fetch('/api/timeline');
+        timelineMilestones = await response.json();
+        
+        // Populate project filter if it's empty
+        populateTimelineProjectFilter();
+        
+        // Apply filters
+        applyTimelineFilters();
+    } catch (error) {
+        console.error('Failed to load timeline:', error);
+    }
+}
+
+function populateTimelineProjectFilter() {
+    const projectFilter = document.getElementById('timelineProjectFilter');
+    
+    // Only populate if it has just the "All Projects" option
+    if (projectFilter.options.length <= 1) {
+        // Get unique projects from milestones
+        const uniqueProjects = [...new Map(timelineMilestones.map(m => 
+            [m.project_id, { id: m.project_id, name: m.project_name, priority: m.project_priority }]
+        )).values()];
+        
+        // Sort projects by priority then name
+        uniqueProjects.sort((a, b) => {
+            if (a.priority === 'converted' && b.priority !== 'converted') return -1;
+            if (a.priority !== 'converted' && b.priority === 'converted') return 1;
+            return a.name.localeCompare(b.name);
+        });
+        
+        // Add options
+        uniqueProjects.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.id;
+            option.textContent = `${project.name} ${project.priority === 'converted' ? '(P1)' : '(P2)'}`;
+            projectFilter.appendChild(option);
+        });
+    }
+}
+
+function applyTimelineFilters() {
+    const projectFilter = document.getElementById('timelineProjectFilter').value;
+    const priorityFilter = document.getElementById('timelinePriorityFilter').value;
+    const statusFilter = document.getElementById('timelineStatusFilter').value;
+    
+    let filteredMilestones = timelineMilestones;
+    
+    if (projectFilter) {
+        filteredMilestones = filteredMilestones.filter(m => m.project_id === projectFilter);
+    }
+    
+    if (priorityFilter) {
+        filteredMilestones = filteredMilestones.filter(m => m.project_priority === priorityFilter);
+    }
+    
+    if (statusFilter) {
+        filteredMilestones = filteredMilestones.filter(m => m.milestone_status === statusFilter);
+    }
+    
+    renderTimeline(filteredMilestones);
+}
+
+function renderTimeline(milestones) {
+    const timeline = document.getElementById('consolidatedTimeline');
+    timeline.innerHTML = '';
+    
+    if (milestones.length === 0) {
+        const projectFilter = document.getElementById('timelineProjectFilter').value;
+        const message = projectFilter 
+            ? 'No milestones found for the selected project and filters' 
+            : 'No milestones found matching the selected filters';
+            
+        timeline.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                ${message}
+            </div>
+        `;
+        return;
+    }
+    
+    // Add summary if filtering by project
+    const projectFilter = document.getElementById('timelineProjectFilter').value;
+    if (projectFilter) {
+        const projectName = timelineMilestones.find(m => m.project_id === projectFilter)?.project_name;
+        const totalMilestones = milestones.length;
+        const completedMilestones = milestones.filter(m => m.milestone_status === 'completed').length;
+        
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = 'timeline-summary';
+        summaryDiv.innerHTML = `
+            <h3>${projectName}</h3>
+            <p>${completedMilestones} of ${totalMilestones} milestones completed</p>
+        `;
+        timeline.appendChild(summaryDiv);
+    }
+    
+    milestones.forEach((milestone, index) => {
+        const milestoneEl = createTimelineMilestone(milestone, index);
+        timeline.appendChild(milestoneEl);
+    });
+    
+    // Animate milestones
+    gsap.from('.milestone', {
+        scale: 0,
+        opacity: 0,
+        duration: 0.5,
+        stagger: 0.1,
+        delay: 0.3,
+        ease: "back.out(1.7)"
+    });
+}
+
+function createTimelineMilestone(milestone, index) {
+    const div = document.createElement('div');
+    const priorityClass = milestone.project_priority === 'converted' ? 'priority-1' : 'priority-2';
+    
+    div.className = `milestone ${milestone.milestone_status} ${priorityClass}`;
+    
+    // Only show project name if not filtering by specific project
+    const projectFilter = document.getElementById('timelineProjectFilter').value;
+    const showProjectName = !projectFilter;
+    
+    // Create compact view with tooltip
+    div.innerHTML = `
+        <div class="milestone-dot"></div>
+        <div class="milestone-content">
+            ${showProjectName ? `<div class="milestone-project-name">${milestone.project_name}</div>` : ''}
+            <div class="milestone-title">${milestone.title}</div>
+            <div class="milestone-date">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                ${formatDate(milestone.date)}
+                <span class="milestone-priority-indicator ${priorityClass}">
+                    ${milestone.project_priority === 'converted' ? 'P1' : 'P2'}
+                </span>
+            </div>
+        </div>
+        <div class="milestone-tooltip">
+            <div class="milestone-tooltip-header">
+                ${showProjectName ? `<div class="milestone-tooltip-project">${milestone.project_name}</div>` : ''}
+                <div class="milestone-tooltip-title">${milestone.title}</div>
+                <div class="milestone-tooltip-date">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    ${formatDate(milestone.date)}
+                </div>
+            </div>
+            ${milestone.description ? `<div class="milestone-tooltip-description">${milestone.description}</div>` : ''}
+            <div class="milestone-tooltip-priority ${priorityClass}">
+                ${milestone.project_priority === 'converted' ? 'Priority 1 - Converted' : 'Priority 2 - Pipeline'}
+            </div>
+        </div>
+    `;
+    
+    return div;
+}
+
+// Add event listeners for timeline filters
+document.getElementById('timelineProjectFilter').addEventListener('change', applyTimelineFilters);
+document.getElementById('timelinePriorityFilter').addEventListener('change', applyTimelineFilters);
+document.getElementById('timelineStatusFilter').addEventListener('change', applyTimelineFilters);
+
+// Initialize
+window.addEventListener('load', () => {
+    loadProjects();
+    
+    // Add entrance animation
+    gsap.from('.header', {
+        y: -100,
+        opacity: 0,
+        duration: 0.8,
+        ease: "power3.out"
+    });
+    
+    gsap.from('.sidebar', {
+        x: -250,
+        opacity: 0,
+        duration: 0.8,
+        ease: "power3.out"
+    });
+});
