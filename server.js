@@ -46,8 +46,8 @@ app.use(session({
     }
 }));
 
-// Serve static files
-app.use(express.static('.'));
+// Serve static files (but not index.html to allow route-based redirects)
+app.use(express.static('.', { index: false }));
 
 // Authentication middleware
 function authenticateToken(req, res, next) {
