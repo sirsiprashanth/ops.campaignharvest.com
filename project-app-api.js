@@ -530,4 +530,211 @@ window.addEventListener('load', () => {
     loadProject();
     
     // Header is visible immediately
+    console.log('Project page loaded successfully');
+    
+    // Initialize audit logs toggle
+    initializeAuditLogs();
 });
+
+// Audit Logs Functionality
+let auditLogsLoaded = false;
+
+function initializeAuditLogs() {
+    const toggleBtn = document.getElementById('toggleAuditLogsBtn');
+    const container = document.getElementById('auditLogsContainer');
+    const toggleText = toggleBtn.querySelector('.toggle-text');
+    
+    if (toggleBtn && container) {
+        toggleBtn.addEventListener('click', () => {
+            const isVisible = container.style.display !== 'none';
+            
+            if (isVisible) {
+                // Hide audit logs
+                container.style.display = 'none';
+                toggleBtn.classList.remove('expanded');
+                toggleText.textContent = 'Show Activity Log';
+            } else {
+                // Show audit logs
+                container.style.display = 'block';
+                toggleBtn.classList.add('expanded');
+                toggleText.textContent = 'Hide Activity Log';
+                
+                // Load audit logs if not already loaded
+                if (!auditLogsLoaded) {
+                    loadAuditLogs();
+                }
+            }
+        });
+    }
+}
+
+async function loadAuditLogs() {
+    const loadingEl = document.getElementById('auditLogsLoading');
+    const listEl = document.getElementById('auditLogsList');
+    const emptyEl = document.getElementById('auditLogsEmpty');
+    
+    // Show loading state
+    loadingEl.style.display = 'flex';
+    listEl.style.display = 'none';
+    emptyEl.style.display = 'none';
+    
+    try {
+        const response = await fetch(`/api/projects/${currentProjectId}/audit-logs`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to load audit logs');
+        }
+        
+        const auditLogs = await response.json();
+        auditLogsLoaded = true;
+        
+        // Hide loading state
+        loadingEl.style.display = 'none';
+        
+        if (auditLogs.length === 0) {
+            emptyEl.style.display = 'flex';
+        } else {
+            displayAuditLogs(auditLogs);
+            listEl.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error loading audit logs:', error);
+        loadingEl.style.display = 'none';
+        emptyEl.style.display = 'flex';
+        emptyEl.querySelector('p').textContent = 'Failed to load activity log. Please try again.';
+    }
+}
+
+function displayAuditLogs(auditLogs) {
+    const listEl = document.getElementById('auditLogsList');
+    
+    listEl.innerHTML = auditLogs.map(log => {
+        const timestamp = dayjs(log.timestamp).format('MMM D, YYYY h:mm A');
+        const relativeTime = dayjs(log.timestamp).fromNow();
+        
+        return `
+            <div class="audit-log-item">
+                <div class="audit-log-icon ${log.action.toLowerCase()}">
+                    ${getAuditLogIcon(log.action)}
+                </div>
+                <div class="audit-log-content">
+                    <div class="audit-log-header">
+                        <div>
+                            <div class="audit-log-action">${formatAuditAction(log)}</div>
+                            <div class="audit-log-user">by ${log.user_name} (${log.user_role})</div>
+                        </div>
+                        <div class="audit-log-timestamp" title="${timestamp}">
+                            ${relativeTime}
+                        </div>
+                    </div>
+                    ${log.old_values || log.new_values ? createChangesSection(log) : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Add click handlers for change details
+    addChangeDetailsHandlers();
+}
+
+function getAuditLogIcon(action) {
+    const icons = {
+        'created': '+',
+        'updated': '✓',
+        'deleted': '×'
+    };
+    return icons[action.toLowerCase()] || '•';
+}
+
+function formatAuditAction(log) {
+    const entity = log.entity_type.charAt(0).toUpperCase() + log.entity_type.slice(1);
+    const action = log.action.toLowerCase();
+    
+    switch (action) {
+        case 'created':
+            return `Created ${entity.toLowerCase()}`;
+        case 'updated':
+            return `Updated ${entity.toLowerCase()}`;
+        case 'deleted':
+            return `Deleted ${entity.toLowerCase()}`;
+        default:
+            return `${action.charAt(0).toUpperCase() + action.slice(1)} ${entity.toLowerCase()}`;
+    }
+}
+
+function createChangesSection(log) {
+    if (!log.old_values && !log.new_values) return '';
+    
+    const logId = `changes-${log.id}`;
+    
+    return `
+        <div class="audit-log-changes">
+            <a href="#" class="audit-log-changes-toggle" data-target="${logId}">
+                View changes
+            </a>
+            <div class="audit-log-changes-details" id="${logId}">
+                ${formatChanges(log.old_values, log.new_values)}
+            </div>
+        </div>
+    `;
+}
+
+function formatChanges(oldValues, newValues) {
+    try {
+        const oldData = oldValues ? JSON.parse(oldValues) : {};
+        const newData = newValues ? JSON.parse(newValues) : {};
+        
+        const allKeys = new Set([...Object.keys(oldData), ...Object.keys(newData)]);
+        
+        return Array.from(allKeys).map(key => {
+            const oldValue = oldData[key];
+            const newValue = newData[key];
+            
+            if (oldValue === newValue) return '';
+            
+            const fieldName = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            
+            return `
+                <div class="audit-log-change-item">
+                    <div class="audit-log-change-field">${fieldName}:</div>
+                    <div class="audit-log-change-values">
+                        ${oldValue !== undefined ? `<div class="audit-log-old-value">${formatValue(oldValue)}</div>` : ''}
+                        ${newValue !== undefined ? `<div class="audit-log-new-value">${formatValue(newValue)}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).filter(item => item).join('');
+    } catch (error) {
+        console.error('Error formatting changes:', error);
+        return '<div class="audit-log-change-item">Unable to display changes</div>';
+    }
+}
+
+function formatValue(value) {
+    if (value === null || value === undefined) return 'None';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'string' && value.includes('T') && value.includes(':')) {
+        // Looks like a date
+        try {
+            return dayjs(value).format('MMM D, YYYY');
+        } catch {
+            return value;
+        }
+    }
+    return String(value);
+}
+
+function addChangeDetailsHandlers() {
+    document.querySelectorAll('.audit-log-changes-toggle').forEach(toggle => {
+        toggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = toggle.dataset.target;
+            const details = document.getElementById(targetId);
+            
+            if (details) {
+                details.classList.toggle('show');
+                toggle.textContent = details.classList.contains('show') ? 'Hide changes' : 'View changes';
+            }
+        });
+    });
+}

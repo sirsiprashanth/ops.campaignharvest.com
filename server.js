@@ -516,6 +516,23 @@ app.get('/api/projects/:id', clientProjectAccess, (req, res) => {
     });
 });
 
+// Get project audit logs (with client access check)
+app.get('/api/projects/:id/audit-logs', clientProjectAccess, (req, res) => {
+    const projectId = req.params.id;
+    
+    db.all(
+        `SELECT * FROM audit_logs WHERE project_id = ? ORDER BY timestamp DESC LIMIT 50`,
+        [projectId],
+        (err, logs) => {
+            if (err) {
+                res.status(500).json({ error: err.message });
+                return;
+            }
+            res.json(logs || []);
+        }
+    );
+});
+
 // Create new project (admin or manager)
 app.post('/api/projects', adminOrManager, (req, res) => {
     const { id, name, start_date, end_date, budget, team_size, status, project_type, priority, urgency } = req.body;
