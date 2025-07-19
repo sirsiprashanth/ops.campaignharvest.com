@@ -1103,7 +1103,7 @@ app.get('/api/projects/export/csv', optionalAuth, (req, res) => {
 // Client Management Routes (Admin only)
 
 // Get all client users
-app.get('/api/clients', adminOnly, (req, res) => {
+app.get('/api/clients', adminOrManager, (req, res) => {
     db.all(`SELECT username, email, created_at FROM client_users ORDER BY created_at DESC`, [], (err, rows) => {
         if (err) {
             res.status(500).json({ error: err.message });
@@ -1114,7 +1114,7 @@ app.get('/api/clients', adminOnly, (req, res) => {
 });
 
 // Create a new client user
-app.post('/api/clients', adminOnly, async (req, res) => {
+app.post('/api/clients', adminOrManager, async (req, res) => {
     const { username, password, email } = req.body;
     
     if (!username || !password) {
@@ -1149,7 +1149,7 @@ app.post('/api/clients', adminOnly, async (req, res) => {
 });
 
 // Delete a client user
-app.delete('/api/clients/:username', adminOnly, (req, res) => {
+app.delete('/api/clients/:username', adminOrManager, (req, res) => {
     const username = req.params.username;
     
     db.run(`DELETE FROM client_users WHERE username = ?`, [username], function(err) {
@@ -1175,7 +1175,7 @@ app.delete('/api/clients/:username', adminOnly, (req, res) => {
 });
 
 // Get project assignments for a client
-app.get('/api/clients/:username/projects', adminOnly, (req, res) => {
+app.get('/api/clients/:username/projects', adminOrManager, (req, res) => {
     const username = req.params.username;
     
     db.all(

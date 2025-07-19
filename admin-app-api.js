@@ -1078,9 +1078,51 @@ function renderTimeline(milestones) {
         timeline.appendChild(summaryDiv);
     }
     
-    milestones.forEach((milestone, index) => {
-        const milestoneEl = createTimelineMilestone(milestone, index);
-        timeline.appendChild(milestoneEl);
+    // Group milestones by date
+    const groupedMilestones = {};
+    milestones.forEach(milestone => {
+        const dateKey = dayjs(milestone.date).format('YYYY-MM-DD');
+        if (!groupedMilestones[dateKey]) {
+            groupedMilestones[dateKey] = [];
+        }
+        groupedMilestones[dateKey].push(milestone);
+    });
+    
+    // Sort dates
+    const sortedDates = Object.keys(groupedMilestones).sort();
+    
+    // Render each date group
+    sortedDates.forEach(dateKey => {
+        const dateGroupMilestones = groupedMilestones[dateKey];
+        
+        // Create date header
+        const dateHeader = document.createElement('div');
+        dateHeader.className = 'timeline-date-header';
+        dateHeader.innerHTML = `
+            <div class="timeline-date-label">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                ${formatDate(dateKey)}
+                <span class="milestone-count">(${dateGroupMilestones.length} milestone${dateGroupMilestones.length !== 1 ? 's' : ''})</span>
+            </div>
+        `;
+        timeline.appendChild(dateHeader);
+        
+        // Create date group container
+        const dateGroup = document.createElement('div');
+        dateGroup.className = 'timeline-date-group';
+        
+        // Add milestones for this date
+        dateGroupMilestones.forEach((milestone, index) => {
+            const milestoneEl = createTimelineMilestone(milestone, index);
+            dateGroup.appendChild(milestoneEl);
+        });
+        
+        timeline.appendChild(dateGroup);
     });
     
     // Animate milestones
@@ -1110,14 +1152,7 @@ function createTimelineMilestone(milestone, index) {
         <div class="milestone-content">
             ${showProjectName ? `<div class="milestone-project-name">${milestone.project_name}</div>` : ''}
             <div class="milestone-title">${milestone.title}</div>
-            <div class="milestone-date">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                ${formatDate(milestone.date)}
+            <div class="milestone-meta">
                 <span class="milestone-priority-indicator ${priorityClass}">
                     ${milestone.project_priority === 'converted' ? 'P1' : 'P2'}
                 </span>

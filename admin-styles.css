@@ -1152,6 +1152,70 @@ body {
     border-left: 3px solid var(--info);
 }
 
+/* Date grouping for consolidated timeline */
+.timeline-date-header {
+    margin: 2rem 0 1rem 0;
+    position: relative;
+}
+
+.timeline-date-header:first-child {
+    margin-top: 0;
+}
+
+.timeline-date-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text-primary);
+    background-color: var(--bg-card);
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.timeline-date-label svg {
+    color: var(--text-secondary);
+}
+
+.milestone-count {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+    margin-left: auto;
+}
+
+.timeline-date-group {
+    position: relative;
+    padding-left: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.timeline-date-group::before {
+    content: '';
+    position: absolute;
+    left: 31px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--border-color);
+    z-index: 1;
+}
+
+.timeline-date-group .milestone {
+    position: relative;
+    z-index: 2;
+    margin-bottom: 0.75rem;
+}
+
+.milestone-meta {
+    display: flex;
+    align-items: center;
+    margin-top: 0.25rem;
+}
+
 /* Audit Logs */
 .audit-logs-container {
     background-color: var(--bg-card);
