@@ -89,8 +89,14 @@ projectPrioritySelect.addEventListener('change', updateFormRequirements);
 // Navigation
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
-        e.preventDefault();
         const section = item.dataset.section;
+        
+        // If no data-section, it's an external link - let it navigate normally
+        if (!section) {
+            return; // Don't prevent default, allow normal navigation
+        }
+        
+        e.preventDefault();
         
         // Update active nav
         document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
@@ -471,6 +477,8 @@ async function editMilestone(milestoneId) {
     // Fill form
     document.getElementById('milestoneTitle').value = milestone.title;
     document.getElementById('milestoneDate').value = milestone.date;
+    document.getElementById('milestoneStartDate').value = milestone.start_date || '';
+    document.getElementById('milestoneDueDate').value = milestone.due_date || '';
     document.getElementById('milestoneDescription').value = milestone.description;
     document.getElementById('milestoneStatus').value = milestone.status;
     document.getElementById('milestoneType').value = milestone.milestone_type || 'general';
@@ -536,6 +544,8 @@ milestoneForm.addEventListener('submit', async (e) => {
     const milestoneData = {
         title: document.getElementById('milestoneTitle').value,
         date: document.getElementById('milestoneDate').value,
+        start_date: document.getElementById('milestoneStartDate').value || null,
+        due_date: document.getElementById('milestoneDueDate').value || null,
         description: document.getElementById('milestoneDescription').value,
         status: document.getElementById('milestoneStatus').value,
         milestone_type: document.getElementById('milestoneType').value
@@ -1571,6 +1581,8 @@ function openMilestoneEditModal(milestone) {
     document.getElementById('editMilestoneTitle').value = milestone.title;
     document.getElementById('editMilestoneDescription').value = milestone.description || '';
     document.getElementById('editMilestoneDate').value = milestone.date;
+    document.getElementById('editMilestoneStartDate').value = milestone.start_date || '';
+    document.getElementById('editMilestoneDueDate').value = milestone.due_date || '';
     document.getElementById('editMilestoneStatus').value = milestone.status;
     
     modal.style.display = 'block';
@@ -1593,14 +1605,16 @@ async function saveMilestoneChanges() {
     const title = document.getElementById('editMilestoneTitle').value;
     const description = document.getElementById('editMilestoneDescription').value;
     const date = document.getElementById('editMilestoneDate').value;
+    const startDate = document.getElementById('editMilestoneStartDate').value;
+    const dueDate = document.getElementById('editMilestoneDueDate').value;
     const status = document.getElementById('editMilestoneStatus').value;
     
     const milestoneData = {
-        
-        
         title: title,
         description: description,
         date: date,
+        start_date: startDate || null,
+        due_date: dueDate || null,
         status: status
     };
     

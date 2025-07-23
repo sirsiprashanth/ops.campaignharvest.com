@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campaign Harvest - Timeline</title>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="admin-styles.css">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Authentication check -->
+    <script src="auth-check.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container-fluid">
+            <div class="header-content">
+                <h1 class="logo">CampaignHarvest - Timeline</h1>
+                <nav class="nav">
+                    <span class="user-info" id="userInfo">Timeline View</span>
+                    <button class="btn btn-sm btn-outline-danger me-3" onclick="logout()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="me-1">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                        Logout
+                    </button>
+                    <button class="theme-toggle" id="themeToggle">
+                        <svg class="sun-icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                        </svg>
+                        <svg class="moon-icon" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <a href="/admin-dashboard.html#projects" class="nav-item">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="3" y1="9" x2="21" y2="9"></line>
+                        <line x1="9" y1="21" x2="9" y2="9"></line>
+                    </svg>
+                    <span>Projects</span>
+                </a>
+                <a href="/admin-dashboard.html#messages" class="nav-item">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span>Messages</span>
+                </a>
+                <a href="/admin-dashboard.html#analytics" class="nav-item">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    <span>Analytics</span>
+                </a>
+                <a href="/timeline" class="nav-item active">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span>Timeline</span>
+                </a>
+                <a href="/admin-dashboard.html#audit-logs" class="nav-item">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="12" y1="18" x2="12" y2="12"></line>
+                        <line x1="9" y1="18" x2="9" y2="12"></line>
+                        <line x1="15" y1="18" x2="15" y2="12"></line>
+                    </svg>
+                    <span>Audit Logs</span>
+                </a>
+                <a href="/admin-dashboard.html#clients" class="nav-item">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <span>Clients</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <section id="timeline-section" class="content-section active">
+                <div class="section-header">
+                    <h2>Consolidated Timeline</h2>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <select class="project-filter" id="timelineProjectFilter">
+                            <option value="">All Projects</option>
+                        </select>
+                        <select class="project-filter" id="timelinePriorityFilter">
+                            <option value="">All Priorities</option>
+                            <option value="converted">Converted (Priority 1)</option>
+                            <option value="pipeline">Pipeline (Priority 2)</option>
+                        </select>
+                        <select class="project-filter" id="timelineStatusFilter">
+                            <option value="">All Statuses</option>
+                            <option value="upcoming">Upcoming</option>
+                            <option value="current">Current</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="timeline-container">
+                    <div id="consolidatedTimeline" class="timeline">
+                        <!-- Timeline will be loaded here -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Milestone Edit Modal -->
+    <div id="milestoneEditModal" class="milestone-edit-modal">
+        <div class="milestone-edit-content">
+            <div class="milestone-edit-header">
+                <h3>Edit Milestone</h3>
+                <button class="close-modal" onclick="closeMilestoneEditModal()">&times;</button>
+            </div>
+            <form id="milestoneEditForm">
+                <input type="hidden" id="editMilestoneId">
+                <input type="hidden" id="editProjectId">
+                
+                <div class="form-group">
+                    <label for="editMilestoneTitle">Title</label>
+                    <input type="text" id="editMilestoneTitle" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editMilestoneDescription">Description</label>
+                    <textarea id="editMilestoneDescription" placeholder="Optional description..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editMilestoneDate">Date</label>
+                    <input type="date" id="editMilestoneDate" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editMilestoneStartDate">Start Date</label>
+                    <input type="date" id="editMilestoneStartDate">
+                </div>
+                
+                <div class="form-group">
+                    <label for="editMilestoneDueDate">Due Date</label>
+                    <input type="date" id="editMilestoneDueDate">
+                </div>
+                
+                <div class="form-group">
+                    <label for="editMilestoneStatus">Status</label>
+                    <select id="editMilestoneStatus" required>
+                        <option value="upcoming">Upcoming</option>
+                        <option value="current">Current</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editMilestoneType">Type</label>
+                    <select id="editMilestoneType" required>
+                        <option value="general">General</option>
+                        <option value="finance">Finance (Admin Only)</option>
+                    </select>
+                    <p class="form-help">Finance milestones are only visible to admin users</p>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeMilestoneEditModal()">Cancel</button>
+                    <button type="submit" class="btn-save">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
+    <script src="api-service.js"></script>
+    <script src="timeline-app.js"></script>
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 1000,
+            easing: 'ease-out-cubic'
+        });
+
+        // Logout functionality
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userRole');
+            window.location.href = '/login.html';
+        }
+
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+
+        // Check for saved theme preference or default to light mode
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        body.setAttribute('data-theme', currentTheme);
+
+        // Update theme toggle button state
+        function updateThemeToggle() {
+            const sunIcon = themeToggle.querySelector('.sun-icon');
+            const moonIcon = themeToggle.querySelector('.moon-icon');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            } else {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            }
+        }
+
+        updateThemeToggle();
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeToggle();
+        });
+    </script>
+</body>
+</html>

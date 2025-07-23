@@ -258,6 +258,19 @@ function initializeDatabase() {
                 console.error('Error adding milestone_type column:', err.message);
             }
         });
+        
+        // Add start_date and due_date columns to existing milestones table
+        db.run(`ALTER TABLE milestones ADD COLUMN start_date TEXT`, (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+                console.error('Error adding start_date column:', err.message);
+            }
+        });
+        
+        db.run(`ALTER TABLE milestones ADD COLUMN due_date TEXT`, (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+                console.error('Error adding due_date column:', err.message);
+            }
+        });
 
         // Messages table
         db.run(`CREATE TABLE IF NOT EXISTS messages (
@@ -675,13 +688,13 @@ app.delete('/api/projects/:id', adminOrManager, (req, res) => {
 
 // Milestone endpoints with audit logging (admin or manager)
 app.post('/api/projects/:projectId/milestones', adminOrManager, (req, res) => {
-    const { id, title, date, description, status, milestone_type } = req.body;
+    const { id, title, date, description, status, milestone_type, start_date, due_date } = req.body;
     const projectId = req.params.projectId;
     const type = milestone_type || 'general';
     
-    db.run(`INSERT INTO milestones (id, project_id, title, date, description, status, milestone_type) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [id, projectId, title, date, description, status, type],
+    db.run(`INSERT INTO milestones (id, project_id, title, date, description, status, milestone_type, start_date, due_date) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, projectId, title, date, description, status, type, start_date, due_date],
         function(err) {
             if (err) {
                 res.status(500).json({ error: err.message });
@@ -695,7 +708,7 @@ app.post('/api/projects/:projectId/milestones', adminOrManager, (req, res) => {
                 entity_id: id,
                 action: 'create',
                 old_values: null,
-                new_values: { title, date, description, status },
+                new_values: { title, date, description, status, start_date, due_date },
                 user_name: req.headers['x-user-name'] || 'Admin',
                 user_role: req.headers['x-user-role'] || 'admin'
             };
@@ -723,7 +736,7 @@ app.post('/api/projects/:projectId/milestones', adminOrManager, (req, res) => {
 });
 
 app.put('/api/milestones/:id', adminOrManager, (req, res) => {
-    const { title, date, description, status } = req.body;
+    const { title, date, description, status, start_date, due_date } = req.body;
     const milestoneId = req.params.id;
     
     // First get the old values
@@ -733,9 +746,9 @@ app.put('/api/milestones/:id', adminOrManager, (req, res) => {
             return;
         }
         
-        db.run(`UPDATE milestones SET title = ?, date = ?, description = ?, status = ?
+        db.run(`UPDATE milestones SET title = ?, date = ?, description = ?, status = ?, start_date = ?, due_date = ?
                 WHERE id = ?`,
-            [title, date, description, status, milestoneId],
+            [title, date, description, status, start_date, due_date, milestoneId],
             function(err) {
                 if (err) {
                     res.status(500).json({ error: err.message });
@@ -752,9 +765,11 @@ app.put('/api/milestones/:id', adminOrManager, (req, res) => {
                         title: oldMilestone.title,
                         date: oldMilestone.date,
                         description: oldMilestone.description,
-                        status: oldMilestone.status
+                        status: oldMilestone.status,
+                        start_date: oldMilestone.start_date,
+                        due_date: oldMilestone.due_date
                     },
-                    new_values: { title, date, description, status },
+                    new_values: { title, date, description, status, start_date, due_date },
                     user_name: req.headers['x-user-name'] || 'Admin',
                     user_role: req.headers['x-user-role'] || 'admin'
                 };
@@ -937,6 +952,8 @@ app.get('/api/timeline', (req, res) => {
             m.id,
             m.title,
             m.date,
+            m.start_date,
+            m.due_date,
             m.description,
             m.status as milestone_status,
             m.project_id,
@@ -1286,6 +1303,10 @@ app.get('/project', (req, res) => {
 
 app.get('/client', (req, res) => {
     res.sendFile(path.join(__dirname, 'client-dashboard.html'));
+});
+
+app.get('/timeline', (req, res) => {
+    res.sendFile(path.join(__dirname, 'timeline.html'));
 });
 
 // Start server

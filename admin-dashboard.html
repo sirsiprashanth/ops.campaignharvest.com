@@ -75,7 +75,7 @@
                     </svg>
                     <span>Analytics</span>
                 </a>
-                <a href="#timeline" class="nav-item" data-section="timeline">
+                <a href="/timeline" class="nav-item">
                     <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
                         <polyline points="12 6 12 12 16 14"></polyline>
@@ -192,7 +192,9 @@
             <section id="timeline-section" class="content-section">
                 <div class="section-header">
                     <h2>Consolidated Timeline</h2>
-                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <a href="/timeline" class="btn btn-secondary" style="margin-left: auto;">View Full Timeline</a>
+                </div>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
                         <select class="project-filter" id="timelineProjectFilter">
                             <option value="">All Projects</option>
                         </select>
@@ -366,6 +368,14 @@
                     <input type="date" id="milestoneDate" required>
                 </div>
                 <div class="form-group">
+                    <label for="milestoneStartDate">Start Date</label>
+                    <input type="date" id="milestoneStartDate">
+                </div>
+                <div class="form-group">
+                    <label for="milestoneDueDate">Due Date</label>
+                    <input type="date" id="milestoneDueDate">
+                </div>
+                <div class="form-group">
                     <label for="milestoneDescription">Description</label>
                     <textarea id="milestoneDescription" rows="3" required></textarea>
                 </div>
@@ -508,6 +518,6 @@
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
     <script src="api-service.js"></script>
     <script src="admin-app-api.js"></script>
-<!-- Milestone Edit Modal -->    <div id="milestoneEditModal" class="milestone-edit-modal">        <div class="milestone-edit-content">            <div class="milestone-edit-header">                <h3>Edit Milestone</h3>                <button class="close-modal" onclick="closeMilestoneEditModal()">&times;</button>            </div>            <form id="milestoneEditForm">                <input type="hidden" id="editMilestoneId">                <input type="hidden" id="editProjectId">                                <div class="form-group">                    <label for="editMilestoneTitle">Title</label>                    <input type="text" id="editMilestoneTitle" required>                </div>                                <div class="form-group">                    <label for="editMilestoneDescription">Description</label>                    <textarea id="editMilestoneDescription" placeholder="Optional description..."></textarea>                </div>                                <div class="form-group">                    <label for="editMilestoneDate">Date</label>                    <input type="date" id="editMilestoneDate" required>                </div>                                <div class="form-group">                    <label for="editMilestoneStatus">Status</label>                    <select id="editMilestoneStatus" required>                        <option value="upcoming">Upcoming</option>                        <option value="current">Current</option>                        <option value="completed">Completed</option>                    </select>                </div>                                <div class="form-group">                    <label for="editMilestoneType">Type</label>                    <select id="editMilestoneType" required>                        <option value="general">General</option>                        <option value="finance">Finance (Admin Only)</option>                    </select>                    <p class="form-help">Finance milestones are only visible to admin users</p>                </div>                                <div class="modal-actions">                    <button type="button" class="btn-cancel" onclick="closeMilestoneEditModal()">Cancel</button>                    <button type="submit" class="btn-save">Save Changes</button>                </div>            </form>        </div>    </div>
+<!-- Milestone Edit Modal -->    <div id="milestoneEditModal" class="milestone-edit-modal">        <div class="milestone-edit-content">            <div class="milestone-edit-header">                <h3>Edit Milestone</h3>                <button class="close-modal" onclick="closeMilestoneEditModal()">&times;</button>            </div>            <form id="milestoneEditForm">                <input type="hidden" id="editMilestoneId">                <input type="hidden" id="editProjectId">                                <div class="form-group">                    <label for="editMilestoneTitle">Title</label>                    <input type="text" id="editMilestoneTitle" required>                </div>                                <div class="form-group">                    <label for="editMilestoneDescription">Description</label>                    <textarea id="editMilestoneDescription" placeholder="Optional description..."></textarea>                </div>                                <div class="form-group">                    <label for="editMilestoneDate">Date</label>                    <input type="date" id="editMilestoneDate" required>                </div>                                <div class="form-group">                    <label for="editMilestoneStartDate">Start Date</label>                    <input type="date" id="editMilestoneStartDate">                </div>                                <div class="form-group">                    <label for="editMilestoneDueDate">Due Date</label>                    <input type="date" id="editMilestoneDueDate">                </div>                                <div class="form-group">                    <label for="editMilestoneStatus">Status</label>                    <select id="editMilestoneStatus" required>                        <option value="upcoming">Upcoming</option>                        <option value="current">Current</option>                        <option value="completed">Completed</option>                    </select>                </div>                                <div class="form-group">                    <label for="editMilestoneType">Type</label>                    <select id="editMilestoneType" required>                        <option value="general">General</option>                        <option value="finance">Finance (Admin Only)</option>                    </select>                    <p class="form-help">Finance milestones are only visible to admin users</p>                </div>                                <div class="modal-actions">                    <button type="button" class="btn-cancel" onclick="closeMilestoneEditModal()">Cancel</button>                    <button type="submit" class="btn-save">Save Changes</button>                </div>            </form>        </div>    </div>
 </body>
 </html>
