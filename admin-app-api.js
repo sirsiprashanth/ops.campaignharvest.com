@@ -1078,9 +1078,51 @@ function renderTimeline(milestones) {
         timeline.appendChild(summaryDiv);
     }
     
-    milestones.forEach((milestone, index) => {
-        const milestoneEl = createTimelineMilestone(milestone, index);
-        timeline.appendChild(milestoneEl);
+    // Group milestones by date
+    const groupedMilestones = {};
+    milestones.forEach(milestone => {
+        const dateKey = dayjs(milestone.date).format('YYYY-MM-DD');
+        if (!groupedMilestones[dateKey]) {
+            groupedMilestones[dateKey] = [];
+        }
+        groupedMilestones[dateKey].push(milestone);
+    });
+    
+    // Sort dates
+    const sortedDates = Object.keys(groupedMilestones).sort();
+    
+    // Render each date group
+    sortedDates.forEach(dateKey => {
+        const dateGroupMilestones = groupedMilestones[dateKey];
+        
+        // Create date header
+        const dateHeader = document.createElement('div');
+        dateHeader.className = 'timeline-date-header';
+        dateHeader.innerHTML = `
+            <div class="timeline-date-label">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                ${formatDate(dateKey)}
+                <span class="milestone-count">(${dateGroupMilestones.length} milestone${dateGroupMilestones.length !== 1 ? 's' : ''})</span>
+            </div>
+        `;
+        timeline.appendChild(dateHeader);
+        
+        // Create date group container
+        const dateGroup = document.createElement('div');
+        dateGroup.className = 'timeline-date-group';
+        
+        // Add milestones for this date
+        dateGroupMilestones.forEach((milestone, index) => {
+            const milestoneEl = createTimelineMilestone(milestone, index);
+            dateGroup.appendChild(milestoneEl);
+        });
+        
+        timeline.appendChild(dateGroup);
     });
     
     // Animate milestones
@@ -1098,7 +1140,8 @@ function createTimelineMilestone(milestone, index) {
     const div = document.createElement('div');
     const priorityClass = milestone.project_priority === 'converted' ? 'priority-1' : 'priority-2';
     
-    div.className = `milestone ${milestone.milestone_status} ${priorityClass}`;
+    div.className = `milestone ${milestone.status} ${priorityClass}`;
+        div.style.cursor = "pointer";    div.onclick = () => openMilestoneEditModal(milestone);
     
     // Only show project name if not filtering by specific project
     const projectFilter = document.getElementById('timelineProjectFilter').value;
@@ -1110,14 +1153,7 @@ function createTimelineMilestone(milestone, index) {
         <div class="milestone-content">
             ${showProjectName ? `<div class="milestone-project-name">${milestone.project_name}</div>` : ''}
             <div class="milestone-title">${milestone.title}</div>
-            <div class="milestone-date">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                ${formatDate(milestone.date)}
+            <div class="milestone-meta">
                 <span class="milestone-priority-indicator ${priorityClass}">
                     ${milestone.project_priority === 'converted' ? 'P1' : 'P2'}
                 </span>
@@ -1524,4 +1560,146 @@ window.addEventListener('load', () => {
         duration: 0.8,
         ease: "power3.out"
     });
-});
+});// Milestone editing functionality
+function openMilestoneEditModal(milestone) {
+    const modal = document.getElementById('milestoneEditModal');
+    const form = document.getElementById('milestoneEditForm');
+    
+    // Populate form with milestone data
+    document.getElementById('editMilestoneId').value = milestone.id;
+    document.getElementById('editProjectId').value = milestone.project_id;
+    document.getElementById('editMilestoneTitle').value = milestone.title;
+    document.getElementById('editMilestoneDescription').value = milestone.description || '';
+    document.getElementById('editMilestoneDate').value = milestone.date;
+    document.getElementById('editMilestoneStatus').value = milestone.status;
+    
+    modal.style.display = 'block';
+    
+    // Add event listener for form submission
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        await saveMilestoneChanges();
+    };
+}
+
+function closeMilestoneEditModal() {
+    const modal = document.getElementById('milestoneEditModal');
+    modal.style.display = 'none';
+}
+
+async function saveMilestoneChanges() {
+    const milestoneId = document.getElementById('editMilestoneId').value;
+    const projectId = document.getElementById('editProjectId').value;
+    const title = document.getElementById('editMilestoneTitle').value;
+    const description = document.getElementById('editMilestoneDescription').value;
+    const date = document.getElementById('editMilestoneDate').value;
+    const status = document.getElementById('editMilestoneStatus').value;
+    
+    const milestoneData = {
+        
+        
+        title: title,
+        description: description,
+        date: date,
+        status: status
+    };
+    
+    try {
+        const response = await fetch("/api/milestones/" + milestoneId, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(milestoneData)
+        });
+        
+        if (response.ok) {
+            closeMilestoneEditModal();
+            showNotification('Milestone updated successfully!', 'success');
+            applyTimelineFilters();
+            
+        } else {
+            throw new Error('Failed to update milestone');
+        }
+    } catch (error) {
+        console.error('Error updating milestone:', error);
+        showNotification('Failed to update milestone. Please try again.', 'error');
+    }
+}
+
+// Close modal when clicking outside of it
+window.onclick = function(event) {
+    const modal = document.getElementById('milestoneEditModal');
+    if (event.target === modal) {
+        closeMilestoneEditModal();
+    }
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <span class="notification-message">${message}</span>
+            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+        </div>
+    `;
+    
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1100;
+        background: ${type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#d1ecf1'};
+        color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#0c5460'};
+        border: 1px solid ${type === 'success' ? '#c3e6cb' : type === 'error' ? '#f5c6cb' : '#bee5eb'};
+        border-radius: 8px;
+        padding: 1rem;
+        min-width: 300px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        animation: slideInRight 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Add animation styles
+const notificationStyles = document.createElement('style');
+notificationStyles.textContent = `
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.notification-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    margin-left: 1rem;
+    opacity: 0.7;
+}
+
+.notification-close:hover {
+    opacity: 1;
+}
+`;
+document.head.appendChild(notificationStyles);

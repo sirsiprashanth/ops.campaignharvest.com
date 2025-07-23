@@ -1,11 +1,27 @@
 // API Service for handling all backend communication
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = '/api';
 
 class APIService {
+    // Helper method to get auth headers
+    static getAuthHeaders() {
+        const token = localStorage.getItem('authToken');
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        return headers;
+    }
+
     // Projects
     static async getProjects() {
         try {
-            const response = await fetch(`${API_BASE_URL}/projects`);
+            const response = await fetch(`${API_BASE_URL}/projects`, {
+                headers: this.getAuthHeaders()
+            });
             if (!response.ok) throw new Error('Failed to fetch projects');
             return await response.json();
         } catch (error) {
@@ -16,7 +32,9 @@ class APIService {
 
     static async getProject(projectId) {
         try {
-            const response = await fetch(`${API_BASE_URL}/projects/${projectId}`);
+            const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+                headers: this.getAuthHeaders()
+            });
             if (!response.ok) throw new Error('Failed to fetch project');
             return await response.json();
         } catch (error) {
@@ -29,9 +47,7 @@ class APIService {
         try {
             const response = await fetch(`${API_BASE_URL}/projects`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify(projectData),
             });
             if (!response.ok) throw new Error('Failed to create project');
@@ -46,9 +62,7 @@ class APIService {
         try {
             const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify(projectData),
             });
             if (!response.ok) throw new Error('Failed to update project');
@@ -63,6 +77,7 @@ class APIService {
         try {
             const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
                 method: 'DELETE',
+                headers: this.getAuthHeaders(),
             });
             if (!response.ok) throw new Error('Failed to delete project');
             return await response.json();
@@ -77,9 +92,7 @@ class APIService {
         try {
             const response = await fetch(`${API_BASE_URL}/projects/${projectId}/milestones`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify(milestoneData),
             });
             if (!response.ok) throw new Error('Failed to create milestone');
@@ -94,9 +107,7 @@ class APIService {
         try {
             const response = await fetch(`${API_BASE_URL}/milestones/${milestoneId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify(milestoneData),
             });
             if (!response.ok) throw new Error('Failed to update milestone');
@@ -111,6 +122,7 @@ class APIService {
         try {
             const response = await fetch(`${API_BASE_URL}/milestones/${milestoneId}`, {
                 method: 'DELETE',
+                headers: this.getAuthHeaders(),
             });
             if (!response.ok) throw new Error('Failed to delete milestone');
             return await response.json();
@@ -123,7 +135,9 @@ class APIService {
     // Messages
     static async getMessages() {
         try {
-            const response = await fetch(`${API_BASE_URL}/messages`);
+            const response = await fetch(`${API_BASE_URL}/messages`, {
+                headers: this.getAuthHeaders()
+            });
             if (!response.ok) throw new Error('Failed to fetch messages');
             return await response.json();
         } catch (error) {
@@ -136,9 +150,7 @@ class APIService {
         try {
             const response = await fetch(`${API_BASE_URL}/projects/${projectId}/messages`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify(messageData),
             });
             if (!response.ok) throw new Error('Failed to create message');
@@ -152,7 +164,9 @@ class APIService {
     // Analytics
     static async getAnalytics() {
         try {
-            const response = await fetch(`${API_BASE_URL}/analytics`);
+            const response = await fetch(`${API_BASE_URL}/analytics`, {
+                headers: this.getAuthHeaders()
+            });
             if (!response.ok) throw new Error('Failed to fetch analytics');
             return await response.json();
         } catch (error) {
