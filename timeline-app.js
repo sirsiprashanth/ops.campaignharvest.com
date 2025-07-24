@@ -22,6 +22,9 @@ async function loadTimelineData() {
         // Populate project filter
         populateProjectFilter();
         
+        // Set default status filter to 'upcoming'
+        document.getElementById('timelineStatusFilter').value = 'upcoming';
+        
         // Load timeline
         applyTimelineFilters();
         
@@ -113,8 +116,6 @@ function createTimelineMilestone(milestone, index) {
                 <div class="milestone-body">
                     ${milestone.description ? `<p class="milestone-description">${milestone.description}</p>` : ''}
                     <div class="milestone-badges">
-                        <span class="status-badge ${milestone.milestone_status}">${milestone.milestone_status}</span>
-                        <span class="priority-badge ${milestone.project_priority}">${milestone.project_priority}</span>
                         ${milestone.start_date ? `<span class="date-badge">Start: ${formatDate(milestone.start_date)}</span>` : ''}
                         ${milestone.due_date ? `<span class="date-badge">Due: ${formatDate(milestone.due_date)}</span>` : ''}
                     </div>

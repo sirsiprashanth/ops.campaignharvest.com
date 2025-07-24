@@ -942,7 +942,7 @@ body {
 }
 
 .milestone-title {
-    font-weight: 600;
+    font-weight: 400;
     font-size: 0.9rem;
     margin-bottom: 0.25rem;
     color: var(--text-primary);
@@ -950,6 +950,14 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Override default h4 bold font weight in timeline milestones */
+.milestone-content h4 {
+    font-weight: 400;
+    font-size: 0.95rem;
+    margin: 0;
+    color: var(--text-primary);
 }
 
 .milestone-date {

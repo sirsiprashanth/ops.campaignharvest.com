@@ -998,6 +998,9 @@ async function loadTimeline() {
         // Populate project filter if it's empty
         populateTimelineProjectFilter();
         
+        // Set default status filter to 'upcoming'
+        document.getElementById('timelineStatusFilter').value = 'upcoming';
+        
         // Apply filters
         applyTimelineFilters();
     } catch (error) {
@@ -1184,9 +1187,6 @@ function createTimelineMilestone(milestone, index) {
                 </div>
             </div>
             ${milestone.description ? `<div class="milestone-tooltip-description">${milestone.description}</div>` : ''}
-            <div class="milestone-tooltip-priority ${priorityClass}">
-                ${milestone.project_priority === 'converted' ? 'Priority 1 - Converted' : 'Priority 2 - Pipeline'}
-            </div>
         </div>
     `;
     
