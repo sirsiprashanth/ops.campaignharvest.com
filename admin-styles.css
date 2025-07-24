@@ -960,6 +960,47 @@ body {
     color: var(--text-primary);
 }
 
+/* Inline priority editing styles */
+.milestone-title-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.milestone-priority-edit {
+    flex-shrink: 0;
+}
+
+.priority-input {
+    width: 50px;
+    padding: 0.25rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    text-align: center;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.priority-input:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+/* Clickable project names in timeline */
+.clickable-project {
+    cursor: pointer;
+    color: #4f46e5;
+    text-decoration: underline;
+    transition: color 0.2s;
+}
+
+.clickable-project:hover {
+    color: #6366f1;
+}
+
 .milestone-date {
     font-size: 0.75rem;
     color: var(--text-secondary);
@@ -1555,6 +1596,8 @@ body {
     border-radius: 12px;
     width: 80%;
     max-width: 600px;
+    max-height: 85vh;
+    overflow-y: auto;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
     animation: modalSlideIn 0.3s ease-out;
 }

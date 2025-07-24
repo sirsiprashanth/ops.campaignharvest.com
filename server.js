@@ -271,6 +271,13 @@ function initializeDatabase() {
                 console.error('Error adding due_date column:', err.message);
             }
         });
+        
+        // Add priority column to existing milestones table
+        db.run(`ALTER TABLE milestones ADD COLUMN priority INTEGER DEFAULT 999`, (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+                console.error('Error adding priority column:', err.message);
+            }
+        });
 
         // Messages table
         db.run(`CREATE TABLE IF NOT EXISTS messages (
@@ -688,13 +695,14 @@ app.delete('/api/projects/:id', adminOrManager, (req, res) => {
 
 // Milestone endpoints with audit logging (admin or manager)
 app.post('/api/projects/:projectId/milestones', adminOrManager, (req, res) => {
-    const { id, title, date, description, status, milestone_type, start_date, due_date } = req.body;
+    const { id, title, date, description, status, milestone_type, start_date, due_date, priority } = req.body;
     const projectId = req.params.projectId;
     const type = milestone_type || 'general';
+    const priorityValue = priority || 999;
     
-    db.run(`INSERT INTO milestones (id, project_id, title, date, description, status, milestone_type, start_date, due_date) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, projectId, title, date, description, status, type, start_date, due_date],
+    db.run(`INSERT INTO milestones (id, project_id, title, date, description, status, milestone_type, start_date, due_date, priority) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, projectId, title, date, description, status, type, start_date, due_date, priorityValue],
         function(err) {
             if (err) {
                 res.status(500).json({ error: err.message });
@@ -708,7 +716,7 @@ app.post('/api/projects/:projectId/milestones', adminOrManager, (req, res) => {
                 entity_id: id,
                 action: 'create',
                 old_values: null,
-                new_values: { title, date, description, status, start_date, due_date },
+                new_values: { title, date, description, status, start_date, due_date, priority: priorityValue },
                 user_name: req.headers['x-user-name'] || 'Admin',
                 user_role: req.headers['x-user-role'] || 'admin'
             };
@@ -736,8 +744,9 @@ app.post('/api/projects/:projectId/milestones', adminOrManager, (req, res) => {
 });
 
 app.put('/api/milestones/:id', adminOrManager, (req, res) => {
-    const { title, date, description, status, start_date, due_date } = req.body;
+    const { title, date, description, status, start_date, due_date, priority } = req.body;
     const milestoneId = req.params.id;
+    const priorityValue = priority || 999;
     
     // First get the old values
     db.get(`SELECT * FROM milestones WHERE id = ?`, [milestoneId], (err, oldMilestone) => {
@@ -746,9 +755,9 @@ app.put('/api/milestones/:id', adminOrManager, (req, res) => {
             return;
         }
         
-        db.run(`UPDATE milestones SET title = ?, date = ?, description = ?, status = ?, start_date = ?, due_date = ?
+        db.run(`UPDATE milestones SET title = ?, date = ?, description = ?, status = ?, start_date = ?, due_date = ?, priority = ?
                 WHERE id = ?`,
-            [title, date, description, status, start_date, due_date, milestoneId],
+            [title, date, description, status, start_date, due_date, priorityValue, milestoneId],
             function(err) {
                 if (err) {
                     res.status(500).json({ error: err.message });
@@ -767,9 +776,10 @@ app.put('/api/milestones/:id', adminOrManager, (req, res) => {
                         description: oldMilestone.description,
                         status: oldMilestone.status,
                         start_date: oldMilestone.start_date,
-                        due_date: oldMilestone.due_date
+                        due_date: oldMilestone.due_date,
+                        priority: oldMilestone.priority
                     },
-                    new_values: { title, date, description, status, start_date, due_date },
+                    new_values: { title, date, description, status, start_date, due_date, priority: priorityValue },
                     user_name: req.headers['x-user-name'] || 'Admin',
                     user_role: req.headers['x-user-role'] || 'admin'
                 };
@@ -956,6 +966,7 @@ app.get('/api/timeline', (req, res) => {
             m.due_date,
             m.description,
             m.status as milestone_status,
+            m.priority,
             m.project_id,
             p.name as project_name,
             p.priority as project_priority,
@@ -963,6 +974,7 @@ app.get('/api/timeline', (req, res) => {
         FROM milestones m
         JOIN projects p ON m.project_id = p.id
         ORDER BY 
+            m.priority ASC,
             CASE p.priority 
                 WHEN 'converted' THEN 1 
                 WHEN 'pipeline' THEN 2 

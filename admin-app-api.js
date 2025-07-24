@@ -482,6 +482,7 @@ async function editMilestone(milestoneId) {
     document.getElementById('milestoneDescription').value = milestone.description;
     document.getElementById('milestoneStatus').value = milestone.status;
     document.getElementById('milestoneType').value = milestone.milestone_type || 'general';
+    document.getElementById('milestonePriority').value = milestone.priority || 999;
     
     milestoneModal.classList.add('active');
 }
@@ -548,7 +549,8 @@ milestoneForm.addEventListener('submit', async (e) => {
         due_date: document.getElementById('milestoneDueDate').value || null,
         description: document.getElementById('milestoneDescription').value,
         status: document.getElementById('milestoneStatus').value,
-        milestone_type: document.getElementById('milestoneType').value
+        milestone_type: document.getElementById('milestoneType').value,
+        priority: parseInt(document.getElementById('milestonePriority').value) || 999
     };
     
     try {
@@ -1154,7 +1156,6 @@ function createTimelineMilestone(milestone, index) {
     const priorityClass = milestone.project_priority === 'converted' ? 'priority-1' : 'priority-2';
     
     div.className = `milestone ${milestone.status} ${priorityClass}`;
-        div.style.cursor = "pointer";    div.onclick = () => openMilestoneEditModal(milestone);
     
     // Only show project name if not filtering by specific project
     const projectFilter = document.getElementById('timelineProjectFilter').value;
@@ -1164,8 +1165,21 @@ function createTimelineMilestone(milestone, index) {
     div.innerHTML = `
         <div class="milestone-dot"></div>
         <div class="milestone-content">
-            ${showProjectName ? `<div class="milestone-project-name">${milestone.project_name}</div>` : ''}
-            <div class="milestone-title">${milestone.title}</div>
+            ${showProjectName ? `<div class="milestone-project-name clickable-project" onclick="openProjectMilestoneManager('${milestone.project_id}', '${milestone.project_name.replace(/'/g, "\\'")}'); event.stopPropagation();" title="Click to manage project milestones">${milestone.project_name}</div>` : ''}
+            <div class="milestone-title-row">
+                <div class="milestone-title" onclick="openMilestoneEditModal(${JSON.stringify(milestone).replace(/"/g, '&quot;')})" style="cursor: pointer; flex: 1;">${milestone.title}</div>
+                <div class="milestone-priority-edit">
+                    <input type="number" 
+                           class="priority-input" 
+                           value="${milestone.priority || 999}" 
+                           min="1" 
+                           max="999" 
+                           onblur="updateMilestonePriorityAdmin('${milestone.id}', this.value)"
+                           onkeypress="if(event.key==='Enter') updateMilestonePriorityAdmin('${milestone.id}', this.value)"
+                           onclick="event.stopPropagation()"
+                           title="Priority (1 = highest)">
+                </div>
+            </div>
             <div class="milestone-meta">
                 <span class="milestone-priority-indicator ${priorityClass}">
                     ${milestone.project_priority === 'converted' ? 'P1' : 'P2'}
@@ -1191,6 +1205,62 @@ function createTimelineMilestone(milestone, index) {
     `;
     
     return div;
+}
+
+// Update milestone priority function for admin dashboard
+async function updateMilestonePriorityAdmin(milestoneId, newPriority) {
+    try {
+        const priorityValue = parseInt(newPriority) || 999;
+        
+        // Get current milestone data first
+        const currentMilestone = timelineMilestones.find(m => m.id === milestoneId);
+        if (!currentMilestone) {
+            throw new Error('Milestone not found');
+        }
+        
+        const milestoneData = {
+            title: currentMilestone.title,
+            description: currentMilestone.description,
+            date: currentMilestone.date,
+            start_date: currentMilestone.start_date,
+            due_date: currentMilestone.due_date,
+            status: currentMilestone.status,
+            priority: priorityValue
+        };
+        
+        // Get auth headers like APIService does
+        const token = localStorage.getItem('authToken');
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        console.log('Updating milestone priority (admin):', { milestoneId, priorityValue, milestoneData });
+        
+        const response = await fetch(`/api/milestones/${milestoneId}`, {
+            method: 'PUT',
+            headers: headers,
+            body: JSON.stringify(milestoneData)
+        });
+        
+        if (response.ok) {
+            console.log('Priority update successful (admin)');
+            showNotification(`Priority updated to ${priorityValue}`, 'success');
+            await loadTimeline(); // Reload timeline to show new order
+        } else {
+            const errorData = await response.text();
+            console.error('Priority update failed (admin):', response.status, errorData);
+            throw new Error(`Failed to update priority: ${response.status} ${errorData}`);
+        }
+    } catch (error) {
+        console.error('Error updating milestone priority:', error);
+        showNotification('Failed to update priority. Please try again.', 'error');
+        // Reload to reset the input value
+        await loadTimeline();
+    }
 }
 
 // Add event listeners for timeline filters
@@ -1584,6 +1654,7 @@ function openMilestoneEditModal(milestone) {
     document.getElementById('editMilestoneStartDate').value = milestone.start_date || '';
     document.getElementById('editMilestoneDueDate').value = milestone.due_date || '';
     document.getElementById('editMilestoneStatus').value = milestone.status;
+    document.getElementById('editMilestonePriority').value = milestone.priority || 999;
     
     modal.style.display = 'block';
     
@@ -1615,7 +1686,8 @@ async function saveMilestoneChanges() {
         date: date,
         start_date: startDate || null,
         due_date: dueDate || null,
-        status: status
+        status: status,
+        priority: parseInt(document.getElementById('editMilestonePriority').value) || 999
     };
     
     try {
