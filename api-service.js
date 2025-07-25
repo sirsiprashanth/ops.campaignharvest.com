@@ -5,12 +5,23 @@ class APIService {
     // Helper method to get auth headers
     static getAuthHeaders() {
         const token = localStorage.getItem('authToken');
+        const userRole = localStorage.getItem('userRole');
+        const userName = localStorage.getItem('userName');
+        
         const headers = {
             'Content-Type': 'application/json'
         };
         
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        if (userRole) {
+            headers['x-user-role'] = userRole;
+        }
+        
+        if (userName) {
+            headers['x-user-name'] = userName;
         }
         
         return headers;
@@ -183,12 +194,27 @@ class APIService {
     // Timeline
     static async getTimeline() {
         try {
-            const response = await fetch(`${API_BASE_URL}/timeline`);
+            const response = await fetch(`${API_BASE_URL}/timeline`, {
+                headers: this.getAuthHeaders()
+            });
             if (!response.ok) throw new Error('Failed to fetch timeline');
             return await response.json();
         } catch (error) {
             console.error('Error fetching timeline:', error);
             throw error;
+        }
+    }
+
+    static async getUsers() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/users`, {
+                headers: this.getAuthHeaders()
+            });
+            if (!response.ok) throw new Error('Failed to fetch users');
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching users:', error);
+            return [];
         }
     }
 }

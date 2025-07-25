@@ -193,6 +193,14 @@
                     <p class="form-help">Lower numbers appear first in timeline (1 = top priority)</p>
                 </div>
                 
+                <div class="form-group">
+                    <label for="editMilestoneAssignee">Assigned To</label>
+                    <select id="editMilestoneAssignee">
+                        <option value="">Unassigned</option>
+                    </select>
+                    <p class="form-help">Assign this milestone to a team member</p>
+                </div>
+                
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" onclick="closeMilestoneEditModal()">Cancel</button>
                     <button type="submit" class="btn-save">Save Changes</button>
@@ -252,6 +260,12 @@
                                 <input type="number" id="newMilestonePriority" min="1" max="999" value="999">
                             </div>
                         </div>
+                        <div class="form-group">
+                            <label for="newMilestoneAssignee">Assigned To</label>
+                            <select id="newMilestoneAssignee">
+                                <option value="">Unassigned</option>
+                            </select>
+                        </div>
                         <button type="submit" class="btn-primary">Add Milestone</button>
                     </form>
                 </div>
@@ -262,6 +276,23 @@
                     <div id="projectMilestonesList" class="project-milestones-list">
                         <!-- Milestones will be loaded here -->
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignment Popup Modal -->
+    <div id="assignmentModal" class="assignment-modal">
+        <div class="assignment-modal-content">
+            <div class="assignment-modal-header">
+                <h3 id="assignmentModalTitle">Assign Task</h3>
+                <button class="close-modal" onclick="closeAssignmentModal()">&times;</button>
+            </div>
+            <div class="assignment-modal-body">
+                <p id="assignmentMilestoneTitle" class="milestone-title-text"></p>
+                <p class="assignment-label">Assign this task to:</p>
+                <div id="assignmentButtons" class="assignment-buttons">
+                    <!-- User buttons will be populated here -->
                 </div>
             </div>
         </div>
@@ -284,6 +315,7 @@
         function logout() {
             localStorage.removeItem('authToken');
             localStorage.removeItem('userRole');
+            localStorage.removeItem('userName');
             window.location.href = '/login.html';
         }
 

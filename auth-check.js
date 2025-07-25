@@ -51,6 +51,8 @@ function logout() {
     })
     .then(() => {
         localStorage.removeItem('authToken');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userName');
         localStorage.removeItem('rememberedUsername');
         window.location.href = '/login.html';
     })
@@ -58,6 +60,8 @@ function logout() {
         console.error('Logout error:', error);
         // Even on error, clear local data and redirect
         localStorage.removeItem('authToken');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userName');
         localStorage.removeItem('rememberedUsername');
         window.location.href = '/login.html';
     });

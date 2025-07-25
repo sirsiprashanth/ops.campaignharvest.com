@@ -26,6 +26,11 @@ const users = {
         username: process.env.MANAGER_USERNAME || 'manager',
         passwordHash: bcrypt.hashSync(process.env.MANAGER_PASSWORD || 'manager123', 10),
         role: 'manager'
+    },
+    gurub: {
+        username: 'gurub',
+        passwordHash: bcrypt.hashSync('gurub123', 10),
+        role: 'manager'
     }
 };
 
@@ -744,7 +749,7 @@ app.post('/api/projects/:projectId/milestones', adminOrManager, (req, res) => {
 });
 
 app.put('/api/milestones/:id', adminOrManager, (req, res) => {
-    const { title, date, description, status, start_date, due_date, priority } = req.body;
+    const { title, date, description, status, start_date, due_date, priority, assigned_to } = req.body;
     const milestoneId = req.params.id;
     const priorityValue = priority || 999;
     
@@ -755,9 +760,9 @@ app.put('/api/milestones/:id', adminOrManager, (req, res) => {
             return;
         }
         
-        db.run(`UPDATE milestones SET title = ?, date = ?, description = ?, status = ?, start_date = ?, due_date = ?, priority = ?
+        db.run(`UPDATE milestones SET title = ?, date = ?, description = ?, status = ?, start_date = ?, due_date = ?, priority = ?, assigned_to = ?
                 WHERE id = ?`,
-            [title, date, description, status, start_date, due_date, priorityValue, milestoneId],
+            [title, date, description, status, start_date, due_date, priorityValue, assigned_to, milestoneId],
             function(err) {
                 if (err) {
                     res.status(500).json({ error: err.message });
@@ -777,9 +782,10 @@ app.put('/api/milestones/:id', adminOrManager, (req, res) => {
                         status: oldMilestone.status,
                         start_date: oldMilestone.start_date,
                         due_date: oldMilestone.due_date,
-                        priority: oldMilestone.priority
+                        priority: oldMilestone.priority,
+                        assigned_to: oldMilestone.assigned_to
                     },
-                    new_values: { title, date, description, status, start_date, due_date, priority: priorityValue },
+                    new_values: { title, date, description, status, start_date, due_date, priority: priorityValue, assigned_to },
                     user_name: req.headers['x-user-name'] || 'Admin',
                     user_role: req.headers['x-user-role'] || 'admin'
                 };
@@ -957,38 +963,107 @@ app.get('/api/audit-logs', (req, res) => {
 
 // Consolidated timeline endpoint
 app.get('/api/timeline', (req, res) => {
-    const query = `
-        SELECT 
-            m.id,
-            m.title,
-            m.date,
-            m.start_date,
-            m.due_date,
-            m.description,
-            m.status as milestone_status,
-            m.priority,
-            m.project_id,
-            p.name as project_name,
-            p.priority as project_priority,
-            p.status as project_status
-        FROM milestones m
-        JOIN projects p ON m.project_id = p.id
-        ORDER BY 
-            m.priority ASC,
-            CASE p.priority 
-                WHEN 'converted' THEN 1 
-                WHEN 'pipeline' THEN 2 
-                ELSE 3 
-            END,
-            m.date ASC
-    `;
+    const userRole = req.headers['x-user-role'] || 'admin';
+    const userName = req.headers['x-user-name'] || 'Admin';
     
-    db.all(query, [], (err, rows) => {
+    console.log('Timeline API - User Role:', userRole, 'User Name:', userName);
+    
+    let query;
+    let params = [];
+    
+    if (userRole === 'manager') {
+        // Managers can only see tasks assigned to them
+        query = `
+            SELECT 
+                m.id,
+                m.title,
+                m.date,
+                m.start_date,
+                m.due_date,
+                m.description,
+                m.status as milestone_status,
+                m.priority,
+                m.assigned_to,
+                m.project_id,
+                p.name as project_name,
+                p.priority as project_priority,
+                p.status as project_status
+            FROM milestones m
+            JOIN projects p ON m.project_id = p.id
+            WHERE m.assigned_to = ?
+            ORDER BY 
+                m.priority ASC,
+                CASE p.priority 
+                    WHEN 'converted' THEN 1 
+                    WHEN 'pipeline' THEN 2 
+                    ELSE 3 
+                END,
+                m.date ASC
+        `;
+        params = [userName];
+    } else {
+        // Admins and clients can see all tasks
+        query = `
+            SELECT 
+                m.id,
+                m.title,
+                m.date,
+                m.start_date,
+                m.due_date,
+                m.description,
+                m.status as milestone_status,
+                m.priority,
+                m.assigned_to,
+                m.project_id,
+                p.name as project_name,
+                p.priority as project_priority,
+                p.status as project_status
+            FROM milestones m
+            JOIN projects p ON m.project_id = p.id
+            ORDER BY 
+                m.priority ASC,
+                CASE p.priority 
+                    WHEN 'converted' THEN 1 
+                    WHEN 'pipeline' THEN 2 
+                    ELSE 3 
+                END,
+                m.date ASC
+        `;
+    }
+    
+    db.all(query, params, (err, rows) => {
+        if (err) {
+            console.log('Timeline API Error:', err.message);
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        console.log('Timeline API Results for', userRole, userName, '- Found', rows.length, 'tasks');
+        res.json(rows);
+    });
+});
+
+// Get available users for assignment
+app.get('/api/users', adminOrManager, (req, res) => {
+    console.log('=== /api/users endpoint called ===');
+    const adminUsers = [
+        { username: 'admin', email: 'admin@campaignharvest.com', type: 'admin' },
+        { username: 'manager', email: 'manager@campaignharvest.com', type: 'manager' },
+        { username: 'gurub', email: 'gurub@campaignharvest.com', type: 'manager' }
+    ];
+    
+    db.all(`SELECT username, email, company_name FROM client_users ORDER BY username`, [], (err, clientUsers) => {
         if (err) {
             res.status(500).json({ error: err.message });
             return;
         }
-        res.json(rows);
+        
+        const allUsers = [
+            ...adminUsers,
+            ...clientUsers.map(user => ({ ...user, type: 'client' }))
+        ];
+        
+        console.log('Users API returning:', allUsers.map(u => u.username));
+        res.json(allUsers);
     });
 });
 

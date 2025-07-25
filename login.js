@@ -51,9 +51,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     localStorage.removeItem('rememberedUsername');
                 }
 
-                // Store auth token
+                // Store auth token and user info
                 if (data.token) {
                     localStorage.setItem('authToken', data.token);
+                }
+                if (data.user) {
+                    localStorage.setItem('userRole', data.user.role);
+                    localStorage.setItem('userName', data.user.username);
                 }
 
                 // Show success message

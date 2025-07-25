@@ -1,6 +1,7 @@
 // Timeline-specific functionality
 let currentProjects = [];
 let timelineData = [];
+let availableUsers = [];
 
 // Initialize timeline page
 document.addEventListener('DOMContentLoaded', async () => {
@@ -10,17 +11,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadTimelineData() {
     try {
-        // Load projects and timeline data
-        const [projects, timeline] = await Promise.all([
+        // Debug: Check localStorage values
+        console.log('User Role:', localStorage.getItem('userRole'));
+        console.log('User Name:', localStorage.getItem('userName'));
+        
+        // Load projects, timeline data, and available users
+        const [projects, timeline, users] = await Promise.all([
             APIService.getProjects(),
-            APIService.getTimeline()
+            APIService.getTimeline(),
+            APIService.getUsers()
         ]);
         
         currentProjects = projects;
         timelineData = timeline;
+        availableUsers = users;
         
-        // Populate project filter
+        console.log('Timeline data loaded:', timeline.length, 'milestones');
+        console.log('Available users loaded:', users.length, 'users');
+        console.log('User list:', users.map(u => u.username));
+        
+        // Populate project filter and user dropdowns
         populateProjectFilter();
+        populateUserDropdowns();
         
         // Set default status filter to 'upcoming'
         document.getElementById('timelineStatusFilter').value = 'upcoming';
@@ -43,6 +55,32 @@ function populateProjectFilter() {
         option.value = project.id;
         option.textContent = project.name;
         select.appendChild(option);
+    });
+}
+
+function populateUserDropdowns() {
+    const editSelect = document.getElementById('editMilestoneAssignee');
+    const newSelect = document.getElementById('newMilestoneAssignee');
+    
+    // Clear existing options (keep "Unassigned")
+    editSelect.innerHTML = '<option value="">Unassigned</option>';
+    newSelect.innerHTML = '<option value="">Unassigned</option>';
+    
+    // Add users to both dropdowns
+    availableUsers.forEach(user => {
+        const displayName = user.type === 'client' ? 
+            `${user.username} (${user.company_name || 'Client'})` : 
+            `${user.username} (${user.type})`;
+        
+        const editOption = document.createElement('option');
+        editOption.value = user.username;
+        editOption.textContent = displayName;
+        editSelect.appendChild(editOption);
+        
+        const newOption = document.createElement('option');
+        newOption.value = user.username;
+        newOption.textContent = displayName;
+        newSelect.appendChild(newOption);
     });
 }
 
@@ -124,6 +162,9 @@ function createTimelineMilestone(milestone, index) {
                     <div class="milestone-meta">
                         <span class="project-name clickable-project" onclick="openProjectMilestoneManager('${milestone.project_id}', '${milestone.project_name.replace(/'/g, "\\'")}'); event.stopPropagation();" title="Click to manage project milestones">${milestone.project_name}</span>
                         <span class="milestone-date">${formatDate(milestone.date)}</span>
+                        <div class="assignee-click" onclick="openAssignmentModal('${milestone.id}', '${milestone.title.replace(/'/g, "\\'")}'); event.stopPropagation();">
+                            ${milestone.assigned_to ? `<span class="assignee-badge clickable">👤 ${milestone.assigned_to}</span>` : '<span class="assignee-badge unassigned clickable">👤 Unassigned</span>'}
+                        </div>
                     </div>
                 </div>
                 <div class="milestone-body" onclick="openMilestoneEditModal(${JSON.stringify(milestone).replace(/"/g, '&quot;')})" style="cursor: pointer;">
@@ -158,6 +199,7 @@ function openMilestoneEditModal(milestone) {
     document.getElementById('editMilestoneDueDate').value = milestone.due_date || '';
     document.getElementById('editMilestoneStatus').value = milestone.milestone_status;
     document.getElementById('editMilestonePriority').value = milestone.priority || 999;
+    document.getElementById('editMilestoneAssignee').value = milestone.assigned_to || '';
     
     modal.style.display = 'block';
     
@@ -181,6 +223,7 @@ async function saveMilestoneChanges() {
     const startDate = document.getElementById('editMilestoneStartDate').value;
     const dueDate = document.getElementById('editMilestoneDueDate').value;
     const status = document.getElementById('editMilestoneStatus').value;
+    const assignee = document.getElementById('editMilestoneAssignee').value;
     
     const milestoneData = {
         title: title,
@@ -189,7 +232,8 @@ async function saveMilestoneChanges() {
         start_date: startDate || null,
         due_date: dueDate || null,
         status: status,
-        priority: parseInt(document.getElementById('editMilestonePriority').value) || 999
+        priority: parseInt(document.getElementById('editMilestonePriority').value) || 999,
+        assigned_to: assignee || null
     };
     
     try {
@@ -338,7 +382,8 @@ async function createNewMilestone() {
             description: document.getElementById('newMilestoneDescription').value,
             status: document.getElementById('newMilestoneStatus').value,
             milestone_type: 'general',
-            priority: parseInt(document.getElementById('newMilestonePriority').value) || 999
+            priority: parseInt(document.getElementById('newMilestonePriority').value) || 999,
+            assigned_to: document.getElementById('newMilestoneAssignee').value || null
         };
         
         const response = await APIService.createMilestone(currentProjectId, milestoneData);
@@ -753,3 +798,114 @@ notificationStyles.textContent = `
 }
 `;
 document.head.appendChild(notificationStyles);
+
+// Assignment modal functions
+let currentAssignmentMilestoneId = null;
+
+function openAssignmentModal(milestoneId, milestoneTitle) {
+    currentAssignmentMilestoneId = milestoneId;
+    
+    const modal = document.getElementById('assignmentModal');
+    const titleElement = document.getElementById('assignmentMilestoneTitle');
+    const buttonsContainer = document.getElementById('assignmentButtons');
+    
+    const userRole = localStorage.getItem('userRole');
+    const userName = localStorage.getItem('userName');
+    
+    titleElement.textContent = milestoneTitle;
+    
+    // Clear existing buttons
+    buttonsContainer.innerHTML = '';
+    
+    // Add "Unassigned" button
+    const unassignedBtn = document.createElement('button');
+    unassignedBtn.className = 'assignment-btn unassigned-btn';
+    unassignedBtn.textContent = '👤 Unassigned';
+    unassignedBtn.onclick = () => updateAssignment(milestoneId, '');
+    buttonsContainer.appendChild(unassignedBtn);
+    
+    if (userRole === 'manager') {
+        // Managers can only assign tasks to themselves
+        const selfBtn = document.createElement('button');
+        selfBtn.className = 'assignment-btn';
+        selfBtn.textContent = `👤 ${userName} (me)`;
+        selfBtn.onclick = () => updateAssignment(milestoneId, userName);
+        buttonsContainer.appendChild(selfBtn);
+    } else {
+        // Admins and clients can assign to anyone
+        availableUsers.forEach(user => {
+            const btn = document.createElement('button');
+            btn.className = 'assignment-btn';
+            const displayName = user.type === 'client' ? 
+                `👤 ${user.username} (${user.company_name || 'Client'})` : 
+                `👤 ${user.username} (${user.type})`;
+            btn.textContent = displayName;
+            btn.onclick = () => updateAssignment(milestoneId, user.username);
+            buttonsContainer.appendChild(btn);
+        });
+    }
+    
+    modal.style.display = 'block';
+}
+
+function closeAssignmentModal() {
+    const modal = document.getElementById('assignmentModal');
+    modal.style.display = 'none';
+    currentAssignmentMilestoneId = null;
+}
+
+async function updateAssignment(milestoneId, assignedTo) {
+    try {
+        // Find the current milestone data from timelineData
+        const milestone = timelineData.find(m => m.id === milestoneId);
+        if (!milestone) {
+            throw new Error('Milestone not found');
+        }
+        
+        // Update with all current data plus new assignment
+        const response = await fetch(`/api/milestones/${milestoneId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title: milestone.title,
+                description: milestone.description,
+                date: milestone.date,
+                start_date: milestone.start_date,
+                due_date: milestone.due_date,
+                status: milestone.milestone_status,
+                priority: milestone.priority || 999,
+                assigned_to: assignedTo || null
+            })
+        });
+        
+        if (response.ok) {
+            showNotification('Assignment updated successfully!', 'success');
+            // Close the modal
+            closeAssignmentModal();
+            // Reload timeline to reflect changes
+            await loadTimelineData();
+        } else {
+            throw new Error('Failed to update assignment');
+        }
+    } catch (error) {
+        console.error('Error updating assignment:', error);
+        showNotification('Failed to update assignment. Please try again.', 'error');
+    }
+}
+
+// Close assignment modal when clicking outside
+document.addEventListener('click', (event) => {
+    const modal = document.getElementById('assignmentModal');
+    if (event.target === modal) {
+        closeAssignmentModal();
+    }
+});
+
+// Close assignment modal on escape key
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        closeAssignmentModal();
+    }
+});
