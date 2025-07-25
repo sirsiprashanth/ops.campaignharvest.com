@@ -33,6 +33,7 @@ async function loadTimelineData() {
         // Populate project filter and user dropdowns
         populateProjectFilter();
         populateUserDropdowns();
+        populateAssigneeFilter();
         
         // Set default status filter to 'upcoming'
         document.getElementById('timelineStatusFilter').value = 'upcoming';
@@ -84,9 +85,26 @@ function populateUserDropdowns() {
     });
 }
 
+function populateAssigneeFilter() {
+    const select = document.getElementById('timelineAssigneeFilter');
+    // Keep the existing "All Assignees" and "Unassigned" options
+    select.innerHTML = '<option value="">All Assignees</option><option value="unassigned">Unassigned</option>';
+    
+    // Add all available users to the filter
+    availableUsers.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.username;
+        const displayName = user.type === 'client' ? 
+            `${user.username} (${user.company_name || 'Client'})` : 
+            `${user.username} (${user.type})`;
+        option.textContent = displayName;
+        select.appendChild(option);
+    });
+}
+
 function setupEventListeners() {
     // Filter event listeners
-    ['timelineProjectFilter', 'timelinePriorityFilter', 'timelineStatusFilter'].forEach(id => {
+    ['timelineProjectFilter', 'timelinePriorityFilter', 'timelineStatusFilter', 'timelineAssigneeFilter'].forEach(id => {
         document.getElementById(id).addEventListener('change', applyTimelineFilters);
     });
 }
@@ -95,6 +113,7 @@ function applyTimelineFilters() {
     const projectFilter = document.getElementById('timelineProjectFilter').value;
     const priorityFilter = document.getElementById('timelinePriorityFilter').value;
     const statusFilter = document.getElementById('timelineStatusFilter').value;
+    const assigneeFilter = document.getElementById('timelineAssigneeFilter').value;
     
     let filteredTimeline = [...timelineData];
     
@@ -108,6 +127,14 @@ function applyTimelineFilters() {
     
     if (statusFilter) {
         filteredTimeline = filteredTimeline.filter(item => item.milestone_status === statusFilter);
+    }
+    
+    if (assigneeFilter) {
+        if (assigneeFilter === 'unassigned') {
+            filteredTimeline = filteredTimeline.filter(item => !item.assigned_to || item.assigned_to === '');
+        } else {
+            filteredTimeline = filteredTimeline.filter(item => item.assigned_to === assigneeFilter);
+        }
     }
     
     renderTimeline(filteredTimeline);
