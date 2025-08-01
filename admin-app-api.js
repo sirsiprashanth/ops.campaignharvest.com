@@ -493,7 +493,6 @@ async function editMilestone(milestoneId) {
     
     // Fill form
     document.getElementById('milestoneTitle').value = milestone.title;
-    document.getElementById('milestoneDate').value = milestone.date;
     document.getElementById('milestoneStartDate').value = milestone.start_date || '';
     document.getElementById('milestoneDueDate').value = milestone.due_date || '';
     document.getElementById('milestoneDescription').value = milestone.description;
@@ -565,11 +564,14 @@ projectForm.addEventListener('submit', async (e) => {
 milestoneForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    const startDate = document.getElementById('milestoneStartDate').value;
+    const dueDate = document.getElementById('milestoneDueDate').value;
+    
     const milestoneData = {
         title: document.getElementById('milestoneTitle').value,
-        date: document.getElementById('milestoneDate').value,
-        start_date: document.getElementById('milestoneStartDate').value || null,
-        due_date: document.getElementById('milestoneDueDate').value || null,
+        date: startDate || dueDate || new Date().toISOString().split('T')[0], // Use start_date, or due_date, or current date
+        start_date: startDate || null,
+        due_date: dueDate || null,
         description: document.getElementById('milestoneDescription').value,
         status: document.getElementById('milestoneStatus').value,
         milestone_type: document.getElementById('milestoneType').value,
@@ -1673,7 +1675,6 @@ function openMilestoneEditModal(milestone) {
     document.getElementById('editProjectId').value = milestone.project_id;
     document.getElementById('editMilestoneTitle').value = milestone.title;
     document.getElementById('editMilestoneDescription').value = milestone.description || '';
-    document.getElementById('editMilestoneDate').value = milestone.date;
     document.getElementById('editMilestoneStartDate').value = milestone.start_date || '';
     document.getElementById('editMilestoneDueDate').value = milestone.due_date || '';
     document.getElementById('editMilestoneStatus').value = milestone.status;
@@ -1698,7 +1699,6 @@ async function saveMilestoneChanges() {
     const projectId = document.getElementById('editProjectId').value;
     const title = document.getElementById('editMilestoneTitle').value;
     const description = document.getElementById('editMilestoneDescription').value;
-    const date = document.getElementById('editMilestoneDate').value;
     const startDate = document.getElementById('editMilestoneStartDate').value;
     const dueDate = document.getElementById('editMilestoneDueDate').value;
     const status = document.getElementById('editMilestoneStatus').value;
@@ -1706,7 +1706,7 @@ async function saveMilestoneChanges() {
     const milestoneData = {
         title: title,
         description: description,
-        date: date,
+        date: startDate || dueDate || new Date().toISOString().split('T')[0], // Use start_date, or due_date, or current date
         start_date: startDate || null,
         due_date: dueDate || null,
         status: status,
