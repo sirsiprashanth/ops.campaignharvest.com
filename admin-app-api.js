@@ -140,6 +140,23 @@ async function loadProjects() {
         return;
     }
     
+    // Sort projects: completed projects at the bottom
+    projects.sort((a, b) => {
+        // If one is completed and the other isn't, put completed at bottom
+        if (a.status === 'completed' && b.status !== 'completed') return 1;
+        if (a.status !== 'completed' && b.status === 'completed') return -1;
+        
+        // If both have same completion status, sort by urgency (higher urgency first)
+        if (a.urgency !== null && b.urgency !== null) {
+            return a.urgency - b.urgency;
+        }
+        if (a.urgency !== null && b.urgency === null) return -1;
+        if (a.urgency === null && b.urgency !== null) return 1;
+        
+        // Finally, sort by name if everything else is equal
+        return a.name.localeCompare(b.name);
+    });
+    
     projects.forEach(project => {
         const projectRow = createProjectRow(project);
         projectsTableBody.appendChild(projectRow);
