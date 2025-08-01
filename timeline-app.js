@@ -2,6 +2,7 @@
 let currentProjects = [];
 let timelineData = [];
 let availableUsers = [];
+let currentView = 'gantt'; // 'timeline' or 'gantt' - default to gantt
 
 // Initialize timeline page
 document.addEventListener('DOMContentLoaded', async () => {
@@ -148,6 +149,17 @@ function renderTimeline(timeline) {
         return;
     }
     
+    // Render based on current view mode
+    if (currentView === 'gantt') {
+        renderGanttChart(timeline);
+    } else {
+        renderTraditionalTimeline(timeline);
+    }
+}
+
+function renderTraditionalTimeline(timeline) {
+    const container = document.getElementById('consolidatedTimeline');
+    
     const timelineHTML = timeline.map((milestone, index) => {
         return createTimelineMilestone(milestone, index);
     }).join('');
@@ -162,6 +174,245 @@ function renderTimeline(timeline) {
         stagger: 0.1,
         ease: "power3.out"
     });
+}
+
+function renderGanttChart(timeline) {
+    const container = document.getElementById('consolidatedTimeline');
+    
+    // Calculate date range for the chart
+    const dateRange = calculateDateRange(timeline);
+    const totalDays = Math.ceil((dateRange.end - dateRange.start) / (1000 * 60 * 60 * 24));
+    
+    // Group milestones by project for better organization
+    const projectGroups = groupByProject(timeline);
+    
+    let ganttHTML = `
+        <div class="gantt-container">
+            <div class="gantt-header">
+                <div class="gantt-timeline-header">
+                    ${createDateHeaders(dateRange, totalDays)}
+                </div>
+            </div>
+            <div class="gantt-body">
+    `;
+    
+    // Create rows for each project
+    Object.entries(projectGroups).forEach(([projectName, milestones]) => {
+        ganttHTML += `
+            <div class="gantt-project-group">
+                <div class="gantt-project-header">
+                    <h4>${projectName}</h4>
+                </div>
+                <div class="gantt-project-rows">
+        `;
+        
+        milestones.forEach(milestone => {
+            ganttHTML += createGanttRow(milestone, dateRange, totalDays);
+        });
+        
+        ganttHTML += `
+                </div>
+            </div>
+        `;
+    });
+    
+    ganttHTML += `
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = ganttHTML;
+    
+    // Auto-scroll to current week
+    requestAnimationFrame(() => {
+        const timelineHeader = document.querySelector('.gantt-timeline-header');
+        const ganttBody = document.querySelector('.gantt-body');
+        
+        if (timelineHeader && ganttBody) {
+            // Calculate scroll position to show current week (default view)
+            const dayWidth = 100;
+            const daysToCurrentWeek = Math.floor((dateRange.defaultViewStart - dateRange.start) / (1000 * 60 * 60 * 24));
+            const scrollPosition = Math.max(0, daysToCurrentWeek * dayWidth - 200); // Offset for better view
+            
+            timelineHeader.scrollLeft = scrollPosition;
+            ganttBody.scrollLeft = scrollPosition;
+            
+            // Sync scroll between header and body
+            timelineHeader.addEventListener('scroll', () => {
+                ganttBody.scrollLeft = timelineHeader.scrollLeft;
+            });
+            
+            ganttBody.addEventListener('scroll', () => {
+                timelineHeader.scrollLeft = ganttBody.scrollLeft;
+            });
+        }
+    });
+    
+    // Animate gantt chart
+    gsap.from('.gantt-row', {
+        x: -50,
+        opacity: 0,
+        duration: 0.6,
+        stagger: 0.1,
+        ease: "power3.out"
+    });
+}
+
+function calculateDateRange(timeline) {
+    // Show 1 week by default, starting from today
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay()); // Start from Sunday
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // End on Saturday
+    
+    // However, we'll create a wider range for scrolling purposes
+    // but only show 1 week in the viewport initially
+    const dates = [];
+    
+    timeline.forEach(milestone => {
+        if (milestone.start_date) dates.push(new Date(milestone.start_date));
+        if (milestone.due_date) dates.push(new Date(milestone.due_date));
+        if (!milestone.start_date && !milestone.due_date && milestone.date) {
+            dates.push(new Date(milestone.date));
+        }
+    });
+    
+    let rangeStart, rangeEnd;
+    
+    if (dates.length === 0) {
+        // Default to 3 months range centered on current week
+        rangeStart = new Date(startOfWeek);
+        rangeStart.setDate(rangeStart.getDate() - 30); // 30 days before
+        rangeEnd = new Date(endOfWeek);
+        rangeEnd.setDate(rangeEnd.getDate() + 60); // 60 days after
+    } else {
+        const minDate = new Date(Math.min(...dates));
+        const maxDate = new Date(Math.max(...dates));
+        
+        // Extend range to include all data plus padding
+        const startPadding = 30 * 24 * 60 * 60 * 1000; // 30 days
+        const endPadding = 30 * 24 * 60 * 60 * 1000; // 30 days
+        
+        rangeStart = new Date(Math.min(minDate.getTime() - startPadding, startOfWeek.getTime() - 30 * 24 * 60 * 60 * 1000));
+        rangeEnd = new Date(Math.max(maxDate.getTime() + endPadding, endOfWeek.getTime() + 60 * 24 * 60 * 60 * 1000));
+    }
+    
+    return {
+        start: rangeStart,
+        end: rangeEnd,
+        defaultViewStart: startOfWeek,
+        defaultViewEnd: endOfWeek
+    };
+}
+
+function groupByProject(timeline) {
+    const groups = {};
+    timeline.forEach(milestone => {
+        const projectName = milestone.project_name;
+        if (!groups[projectName]) {
+            groups[projectName] = [];
+        }
+        groups[projectName].push(milestone);
+    });
+    
+    // Sort milestones within each project by priority then date
+    Object.keys(groups).forEach(projectName => {
+        groups[projectName].sort((a, b) => {
+            const priorityA = a.priority || 999;
+            const priorityB = b.priority || 999;
+            if (priorityA !== priorityB) return priorityA - priorityB;
+            
+            const dateA = new Date(a.start_date || a.date);
+            const dateB = new Date(b.start_date || b.date);
+            return dateA - dateB;
+        });
+    });
+    
+    return groups;
+}
+
+function createDateHeaders(dateRange, totalDays) {
+    let headersHTML = '<div class="gantt-date-headers">';
+    
+    const current = new Date(dateRange.start);
+    const dayWidth = 100; // Fixed width per day for scrolling
+    
+    while (current <= dateRange.end) {
+        const isToday = current.toDateString() === new Date().toDateString();
+        const isWeekend = current.getDay() === 0 || current.getDay() === 6;
+        const isDefaultWeek = current >= dateRange.defaultViewStart && current <= dateRange.defaultViewEnd;
+        
+        headersHTML += `
+            <div class="gantt-date-header ${isToday ? 'today' : ''} ${isWeekend ? 'weekend' : ''} ${isDefaultWeek ? 'default-week' : ''}" 
+                 style="min-width: ${dayWidth}px; width: ${dayWidth}px;">
+                <div class="date-day">${current.getDate()}</div>
+                <div class="date-month">${current.toLocaleDateString('en', {month: 'short'})}</div>
+            </div>
+        `;
+        
+        current.setDate(current.getDate() + 1);
+    }
+    
+    headersHTML += '</div>';
+    return headersHTML;
+}
+
+function createGanttRow(milestone, dateRange, totalDays) {
+    const startDate = milestone.start_date ? new Date(milestone.start_date) : new Date(milestone.date);
+    const endDate = milestone.due_date ? new Date(milestone.due_date) : startDate;
+    
+    // Calculate position and width in pixels
+    const dayWidth = 100; // pixels per day
+    const startOffset = Math.max(0, (startDate - dateRange.start) / (1000 * 60 * 60 * 24));
+    const duration = Math.max(1, (endDate - startDate) / (1000 * 60 * 60 * 24));
+    
+    const leftPixels = startOffset * dayWidth;
+    const widthPixels = Math.max(20, duration * dayWidth); // Minimum 20px width
+    
+    const statusClass = `milestone-${milestone.milestone_status}`;
+    const priorityClass = milestone.project_priority === 'converted' ? 'priority-1' : 'priority-2';
+    
+    // Determine text positioning based on bar width
+    const isSmallBar = widthPixels < 80;
+    const textPosition = isSmallBar ? 'outside' : 'inside';
+    const textStyle = isSmallBar ? 
+        `position: absolute; left: ${widthPixels + 8}px; top: 50%; transform: translateY(-50%); color: #374151 !important; background: white !important; padding: 0.25rem 0.5rem !important; border-radius: 0.375rem !important; border: 1px solid #d1d5db !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important; font-weight: 500 !important; z-index: 20 !important; cursor: pointer !important; pointer-events: auto !important;` : 
+        '';
+    const textOnClick = isSmallBar ? `onclick="openMilestoneEditModal(${JSON.stringify(milestone).replace(/"/g, '&quot;')})"` : '';
+
+    return `
+        <div class="gantt-row">
+            <div class="gantt-task-info">
+                <div class="task-title" onclick="openMilestoneEditModal(${JSON.stringify(milestone).replace(/"/g, '&quot;')})" 
+                     style="cursor: pointer;" title="${milestone.title}">
+                    ${milestone.title}
+                </div>
+                <div class="task-meta">
+                    <span class="task-dates">
+                        ${formatDate(startDate)} 
+                        ${endDate > startDate ? '→ ' + formatDate(endDate) : ''}
+                    </span>
+                    ${milestone.assigned_to ? `<span class="assignee-mini">👤 ${milestone.assigned_to}</span>` : ''}
+                </div>
+            </div>
+            <div class="gantt-timeline">
+                <div class="gantt-timeline-content" style="position: relative; width: ${(dateRange.end - dateRange.start) / (1000 * 60 * 60 * 24) * 100}px; height: 100%;">
+                    <div class="gantt-bar ${statusClass} ${priorityClass}" 
+                         style="left: ${leftPixels}px; width: ${widthPixels}px; cursor: pointer;"
+                         title="${milestone.project_name}: ${milestone.title} (${formatDate(startDate)} - ${formatDate(endDate)})"
+                         onclick="openMilestoneEditModal(${JSON.stringify(milestone).replace(/"/g, '&quot;')})">
+                        <div class="gantt-bar-content">
+                            <span class="gantt-bar-text ${textPosition}" style="${textStyle}" ${textOnClick}>
+                                <span class="project-prefix">${milestone.project_name}:</span> ${milestone.title}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 function createTimelineMilestone(milestone, index) {
@@ -221,7 +472,6 @@ function openMilestoneEditModal(milestone) {
     document.getElementById('editProjectId').value = milestone.project_id;
     document.getElementById('editMilestoneTitle').value = milestone.title;
     document.getElementById('editMilestoneDescription').value = milestone.description || '';
-    document.getElementById('editMilestoneDate').value = milestone.date;
     document.getElementById('editMilestoneStartDate').value = milestone.start_date || '';
     document.getElementById('editMilestoneDueDate').value = milestone.due_date || '';
     document.getElementById('editMilestoneStatus').value = milestone.milestone_status;
@@ -246,7 +496,6 @@ async function saveMilestoneChanges() {
     const milestoneId = document.getElementById('editMilestoneId').value;
     const title = document.getElementById('editMilestoneTitle').value;
     const description = document.getElementById('editMilestoneDescription').value;
-    const date = document.getElementById('editMilestoneDate').value;
     const startDate = document.getElementById('editMilestoneStartDate').value;
     const dueDate = document.getElementById('editMilestoneDueDate').value;
     const status = document.getElementById('editMilestoneStatus').value;
@@ -255,7 +504,6 @@ async function saveMilestoneChanges() {
     const milestoneData = {
         title: title,
         description: description,
-        date: date,
         start_date: startDate || null,
         due_date: dueDate || null,
         status: status,
@@ -936,3 +1184,72 @@ document.addEventListener('keydown', (event) => {
         closeAssignmentModal();
     }
 });
+
+// View switching functionality
+function switchTimelineView(viewType) {
+    currentView = viewType;
+    
+    // Update button states
+    document.getElementById('timelineViewBtn').classList.toggle('active', viewType === 'timeline');
+    document.getElementById('ganttViewBtn').classList.toggle('active', viewType === 'gantt');
+    
+    // Show/hide navigation controls
+    const ganttNavigation = document.getElementById('ganttNavigation');
+    if (ganttNavigation) {
+        ganttNavigation.style.display = viewType === 'gantt' ? 'flex' : 'none';
+    }
+    
+    // Re-render the timeline with the new view
+    applyTimelineFilters();
+}
+
+// Week navigation functionality
+let currentScrollOffset = 0;
+
+function navigateWeek(direction) {
+    const timelineHeader = document.querySelector('.gantt-timeline-header');
+    const ganttBody = document.querySelector('.gantt-body');
+    
+    if (timelineHeader && ganttBody) {
+        const dayWidth = 100;
+        const weekWidth = dayWidth * 7; // 7 days per week
+        currentScrollOffset += direction * weekWidth;
+        
+        // Ensure we don't scroll beyond the content
+        const maxScroll = timelineHeader.scrollWidth - timelineHeader.clientWidth;
+        currentScrollOffset = Math.max(0, Math.min(currentScrollOffset, maxScroll));
+        
+        timelineHeader.scrollTo({
+            left: currentScrollOffset,
+            behavior: 'smooth'
+        });
+        ganttBody.scrollTo({
+            left: currentScrollOffset,
+            behavior: 'smooth'
+        });
+    }
+}
+
+function navigateToToday() {
+    const timelineHeader = document.querySelector('.gantt-timeline-header');
+    const ganttBody = document.querySelector('.gantt-body');
+    
+    if (timelineHeader && ganttBody) {
+        // Find the current week position and scroll to it
+        const todayHeader = document.querySelector('.gantt-date-header.today');
+        if (todayHeader) {
+            const dayWidth = 100;
+            const scrollPosition = Math.max(0, todayHeader.offsetLeft - 200); // Center with offset
+            currentScrollOffset = scrollPosition;
+            
+            timelineHeader.scrollTo({
+                left: scrollPosition,
+                behavior: 'smooth'
+            });
+            ganttBody.scrollTo({
+                left: scrollPosition,
+                behavior: 'smooth'
+            });
+        }
+    }
+}

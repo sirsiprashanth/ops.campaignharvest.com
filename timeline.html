@@ -106,8 +106,41 @@
         <main class="main-content">
             <section id="timeline-section" class="content-section active">
                 <div class="section-header">
-                    <h2>Consolidated Timeline</h2>
-                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <h2>Consolidated Timeline</h2>
+                        <div class="view-toggle-container">
+                            <button class="view-toggle-btn" id="timelineViewBtn" onclick="switchTimelineView('timeline')">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12,6 12,12 16,14"></polyline>
+                                </svg>
+                                Timeline
+                            </button>
+                            <button class="view-toggle-btn active" id="ganttViewBtn" onclick="switchTimelineView('gantt')">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <rect x="3" y="4" width="18" height="2"></rect>
+                                    <rect x="3" y="8" width="12" height="2"></rect>
+                                    <rect x="3" y="12" width="14" height="2"></rect>
+                                    <rect x="3" y="16" width="8" height="2"></rect>
+                                </svg>
+                                Gantt Chart
+                            </button>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; align-items: center;">
+                        <div class="gantt-navigation" id="ganttNavigation" style="display: flex;">
+                            <button class="nav-btn" id="prevWeek" onclick="navigateWeek(-1)" title="Previous Week">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <polyline points="15,18 9,12 15,6"></polyline>
+                                </svg>
+                            </button>
+                            <button class="nav-btn" id="todayBtn" onclick="navigateToToday()" title="Go to Current Week">Today</button>
+                            <button class="nav-btn" id="nextWeek" onclick="navigateWeek(1)" title="Next Week">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <polyline points="9,18 15,12 9,6"></polyline>
+                                </svg>
+                            </button>
+                        </div>
                         <select class="project-filter" id="timelineProjectFilter">
                             <option value="">All Projects</option>
                         </select>
@@ -156,11 +189,6 @@
                 <div class="form-group">
                     <label for="editMilestoneDescription">Description</label>
                     <textarea id="editMilestoneDescription" placeholder="Optional description..."></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label for="editMilestoneDate">Date</label>
-                    <input type="date" id="editMilestoneDate" required>
                 </div>
                 
                 <div class="form-group">

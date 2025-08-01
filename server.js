@@ -749,7 +749,7 @@ app.post('/api/projects/:projectId/milestones', adminOrManager, (req, res) => {
 });
 
 app.put('/api/milestones/:id', adminOrManager, (req, res) => {
-    const { title, date, description, status, start_date, due_date, priority, assigned_to } = req.body;
+    const { title, description, status, start_date, due_date, priority, assigned_to } = req.body;
     const milestoneId = req.params.id;
     const priorityValue = priority || 999;
     
@@ -760,9 +760,9 @@ app.put('/api/milestones/:id', adminOrManager, (req, res) => {
             return;
         }
         
-        db.run(`UPDATE milestones SET title = ?, date = ?, description = ?, status = ?, start_date = ?, due_date = ?, priority = ?, assigned_to = ?
+        db.run(`UPDATE milestones SET title = ?, description = ?, status = ?, start_date = ?, due_date = ?, priority = ?, assigned_to = ?
                 WHERE id = ?`,
-            [title, date, description, status, start_date, due_date, priorityValue, assigned_to, milestoneId],
+            [title, description, status, start_date, due_date, priorityValue, assigned_to, milestoneId],
             function(err) {
                 if (err) {
                     res.status(500).json({ error: err.message });
@@ -777,7 +777,6 @@ app.put('/api/milestones/:id', adminOrManager, (req, res) => {
                     action: 'update',
                     old_values: {
                         title: oldMilestone.title,
-                        date: oldMilestone.date,
                         description: oldMilestone.description,
                         status: oldMilestone.status,
                         start_date: oldMilestone.start_date,
@@ -785,7 +784,7 @@ app.put('/api/milestones/:id', adminOrManager, (req, res) => {
                         priority: oldMilestone.priority,
                         assigned_to: oldMilestone.assigned_to
                     },
-                    new_values: { title, date, description, status, start_date, due_date, priority: priorityValue, assigned_to },
+                    new_values: { title, description, status, start_date, due_date, priority: priorityValue, assigned_to },
                     user_name: req.headers['x-user-name'] || 'Admin',
                     user_role: req.headers['x-user-role'] || 'admin'
                 };

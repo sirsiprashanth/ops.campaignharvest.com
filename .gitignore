@@ -37,3 +37,4 @@ backups/
 tmp/
 temp/
 *.tmp
+campaign_harvest.db
