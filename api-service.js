@@ -14,6 +14,8 @@ class APIService {
         
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
+        } else {
+            console.warn('No auth token found in localStorage');
         }
         
         if (userRole) {
@@ -76,7 +78,12 @@ class APIService {
                 headers: this.getAuthHeaders(),
                 body: JSON.stringify(projectData),
             });
-            if (!response.ok) throw new Error('Failed to update project');
+            
+            if (!response.ok) {
+                const errorData = await response.text();
+                console.error('Update project error response:', errorData);
+                throw new Error(`Failed to update project: ${response.status} - ${errorData}`);
+            }
             return await response.json();
         } catch (error) {
             console.error('Error updating project:', error);

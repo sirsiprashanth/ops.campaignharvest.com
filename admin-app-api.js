@@ -507,14 +507,19 @@ projectForm.addEventListener('submit', async (e) => {
     const priority = document.getElementById('projectPriority').value;
     const isPipeline = priority === 'pipeline';
     
+    // Get form values with proper defaults for required fields
+    const budgetValue = document.getElementById('budget').value;
+    const teamSizeValue = document.getElementById('teamSize').value;
+    const startDateValue = document.getElementById('startDate').value;
+    
     const projectData = {
         name: document.getElementById('projectName').value,
-        start_date: document.getElementById('startDate').value || (isPipeline ? null : undefined),
+        start_date: startDateValue || (isPipeline ? new Date().toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
         end_date: document.getElementById('endDate').value || null,
-        budget: document.getElementById('budget').value ? parseInt(document.getElementById('budget').value) : (isPipeline ? null : undefined),
-        team_size: document.getElementById('teamSize').value ? parseInt(document.getElementById('teamSize').value) : (isPipeline ? null : undefined),
+        budget: budgetValue && budgetValue.trim() !== '' ? parseInt(budgetValue) : 0,
+        team_size: teamSizeValue && teamSizeValue.trim() !== '' ? parseInt(teamSizeValue) : 1,
         status: document.getElementById('projectStatus').value,
-        project_type: document.getElementById('projectType').value || (isPipeline ? null : undefined),
+        project_type: document.getElementById('projectType').value || (isPipeline ? null : 'fixed'),
         priority: priority,
         urgency: editingProjectId ? editingProjectUrgency : null // Preserve urgency when editing
     };
@@ -535,7 +540,8 @@ projectForm.addEventListener('submit', async (e) => {
         projectModal.classList.remove('active');
         projectForm.reset();
     } catch (error) {
-        showNotification('Failed to save project', 'error');
+        console.error('Error saving project:', error);
+        showNotification('Failed to save project: ' + error.message, 'error');
     }
 });
 
