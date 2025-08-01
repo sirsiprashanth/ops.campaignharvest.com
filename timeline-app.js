@@ -149,11 +149,18 @@ function renderTimeline(timeline) {
         return;
     }
     
+    // Sort timeline by start date (earliest first)
+    const sortedTimeline = [...timeline].sort((a, b) => {
+        const dateA = new Date(a.start_date || a.date);
+        const dateB = new Date(b.start_date || b.date);
+        return dateA - dateB;
+    });
+    
     // Render based on current view mode
     if (currentView === 'gantt') {
-        renderGanttChart(timeline);
+        renderGanttChart(sortedTimeline);
     } else {
-        renderTraditionalTimeline(timeline);
+        renderTraditionalTimeline(sortedTimeline);
     }
 }
 
@@ -317,13 +324,9 @@ function groupByProject(timeline) {
         groups[projectName].push(milestone);
     });
     
-    // Sort milestones within each project by priority then date
+    // Sort milestones within each project by start date (earliest first)
     Object.keys(groups).forEach(projectName => {
         groups[projectName].sort((a, b) => {
-            const priorityA = a.priority || 999;
-            const priorityB = b.priority || 999;
-            if (priorityA !== priorityB) return priorityA - priorityB;
-            
             const dateA = new Date(a.start_date || a.date);
             const dateB = new Date(b.start_date || b.date);
             return dateA - dateB;
@@ -602,12 +605,11 @@ function renderProjectMilestones() {
         return;
     }
     
-    // Sort by priority, then by date
+    // Sort by start date (earliest first)
     const sortedMilestones = [...projectMilestones].sort((a, b) => {
-        if (a.priority !== b.priority) {
-            return (a.priority || 999) - (b.priority || 999);
-        }
-        return new Date(a.date) - new Date(b.date);
+        const dateA = new Date(a.start_date || a.date);
+        const dateB = new Date(b.start_date || b.date);
+        return dateA - dateB;
     });
     
     const milestonesHTML = sortedMilestones.map(milestone => `
